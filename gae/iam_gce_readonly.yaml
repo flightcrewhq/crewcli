@@ -1,0 +1,13 @@
+title: Flightcrew Read-Only (GCE)
+description: Grants Flightcrew read access to GCE VM instance configs and monitoring.
+stage: ALPHA
+# These permissions are pared down from those specified in the GCP docs:
+# https://cloud.google.com/iam/docs/understanding-roles#compute-engine-roles
+includedPermissions:
+- compute.zones.list
+- compute.instances.list
+
+# Read monitoring data.
+- monitoring.metricDescriptors.get
+- monitoring.metricDescriptors.list
+- monitoring.timeSeries.list
