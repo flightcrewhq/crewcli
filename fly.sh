@@ -26,8 +26,8 @@ ERR_GCLOUD_FAILED=3
 
 # Default flag settings
 PERMISSIONS=readonly
-IAM_ROLE=flightcrew.gce.read.only
-IAM_FILE=iam_gce_readonly.yaml
+IAM_ROLE=flightcrew.gae.read.only
+IAM_FILE=gcp/gae/iam_readonly.yaml
 FC_SERVICE_ACCOUNT=flightcrew-runner
 
 VIRTUAL_MACHINE=flightcrew-control-tower
@@ -146,8 +146,8 @@ if [[ "${PERMISSIONS}" == "readonly" ]]; then
 elif [[ "${PERMISSIONS}" == "readwrite" ]]; then
   echo "VM will have read and write permissions."
 
-  IAM_ROLE=flightcrew.read.write
-  IAM_FILE=iam_readwrite.yaml
+  IAM_ROLE=flightcrew.gae.write
+  IAM_FILE=gcp/gae/iam_readonly.yaml
 
 else
 	printf "${COLOR_BOLDRED}[Error]${COLOR_RESET} --permissions value is unrecognized.\n\n"
