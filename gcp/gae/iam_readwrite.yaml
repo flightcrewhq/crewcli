@@ -1,0 +1,25 @@
+title: Flightcrew AppEngine (Write)
+description: Grants Flightcrew's Control Tower VM write access to AppEngine configs and monitoring.
+stage: ALPHA
+# These permissions add to the Read-Only role to deploy new AppEngine versions.
+includedPermissions:
+# Change the service's traffic splitting:
+- appengine.services.update
+
+# CRUD for Versions
+- appengine.versions.create
+- appengine.versions.update
+- appengine.versions.delete
+
+# CloudBuild is needed to create new versions.
+# These permissions come from Cloud Build Editor and Cloud Storage Object Admin:
+# https://cloud.google.com/iam/docs/understanding-roles#cloudbuild.builds.editor
+- cloudbuild.builds.create
+- cloudbuild.builds.get
+- storage.buckets.get
+- storage.objects.create
+- storage.objects.get
+- storage.objects.list
+- storage.objects.delete
+- logging.logEntries.create
+- iam.serviceAccounts.actAs
