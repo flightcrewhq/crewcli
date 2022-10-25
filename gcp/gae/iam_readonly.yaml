@@ -1,8 +1,8 @@
-title: Flightcrew Read-Only
-description: Grants Flightcrew read access to AppEngine configs and monitoring.
+title: Flightcrew AppEngine (Read-Only)
+description: Grants Flightcrew's Control Tower VM read access to AppEngine configs and monitoring.
 stage: ALPHA
 # These permissions are pared down from those specified in the GCP docs
-# for how to deploy new AppEngine versions:
+# for how to read AppEngine versions:
 # https://cloud.google.com/iam/docs/understanding-roles#app-engine-roles
 includedPermissions:
 # Read the Application config
@@ -17,7 +17,7 @@ includedPermissions:
 - appengine.versions.get
 - appengine.versions.list
 
-# Read monitoring data.
+# Read monitoring data
 - monitoring.metricDescriptors.get
 - monitoring.metricDescriptors.list
 - monitoring.timeSeries.list
