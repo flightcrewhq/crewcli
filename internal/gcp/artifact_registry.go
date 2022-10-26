@@ -1,0 +1,99 @@
+package gcp
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"regexp"
+
+	registry "google.golang.org/api/artifactregistry/v1"
+)
+
+var (
+	ArtifactRegistryService *registry.Service
+	imagePath               = "us-west1-docker.pkg.dev/flightcrew-artifacts/client/tower"
+	versionRE               = regexp.MustCompile(`[0-9]+\.[0-9]+\.[0-9]+`)
+)
+
+const (
+	parent   = "projects/flightcrew-artifacts/locations/us-west1/repositories/client"
+	pageSize = 50
+)
+
+func InitArtifactRegistry() error {
+	ctx := context.Background()
+	service, err := registry.NewService(ctx)
+	if err != nil {
+		return fmt.Errorf("init google artifact registry: %w", err)
+	}
+
+	ArtifactRegistryService = service
+	return nil
+}
+
+// GetTowerImageVersion returns the associated image tag in the form of x.x.x
+// so that it can be passed into the Tower.
+func GetTowerImageVersion(version string) (string, error) {
+	images := make([]*registry.DockerImage, 0)
+
+	var pageToken string
+	for {
+		resp, token, err := queryDockerImageAPI(pageToken)
+		if err != nil {
+			return "", fmt.Errorf("query docker image api: %w", err)
+		}
+
+		images = append(images, resp...)
+
+		if token == "" {
+			break
+		}
+
+		pageToken = token
+	}
+
+	var desiredImage *registry.DockerImage
+	for i, image := range images {
+		for _, tag := range image.Tags {
+			if tag == version {
+				desiredImage = images[i]
+				break
+			}
+		}
+
+		if desiredImage != nil {
+			break
+		}
+	}
+
+	if desiredImage == nil {
+		return "", fmt.Errorf("unable to find tower version: %s", version)
+	}
+
+	if versionRE.MatchString(version) {
+		return version, nil
+	}
+
+	for _, tag := range desiredImage.Tags {
+		if versionRE.MatchString(tag) {
+			return tag, nil
+		}
+	}
+
+	return "", fmt.Errorf("no valid tower version tag found from %s", version)
+}
+
+func queryDockerImageAPI(pageToken string) ([]*registry.DockerImage, string, error) {
+	dockerImageSvc := ArtifactRegistryService.Projects.Locations.Repositories.DockerImages
+	call := dockerImageSvc.List(parent).PageSize(pageSize).PageToken(pageToken)
+	resp, err := call.Do()
+	if err != nil {
+		return nil, "", fmt.Errorf("list docker images: %w", err)
+	}
+
+	if resp.HTTPStatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("google artifact registry api returned not OK: %d", resp.HTTPStatusCode)
+	}
+
+	return resp.DockerImages, resp.NextPageToken, nil
+}
