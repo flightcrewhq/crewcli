@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wordwrap"
 )
 
 const (
@@ -22,6 +23,9 @@ const (
 
 type installModel struct {
 	params InstallParams
+
+	width  int
+	height int
 
 	inputs     map[string]*wrappedInput
 	inputKeys  []string
@@ -197,6 +201,10 @@ func (m installModel) Init() tea.Cmd {
 
 func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height // height is available too
+
 	case tea.KeyMsg:
 		s := msg.String()
 		switch s {
@@ -220,6 +228,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return NewRunModel(args), nil
 			} else if s == "enter" && m.focusIndex == len(m.inputs)+1 {
 				m.confirming = false
+				m.focusIndex = len(m.inputs)
 				return m, nil
 			}
 
@@ -227,6 +236,13 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.confirming {
 				if s == "up" || s == "shift+tab" {
 					m.focusIndex--
+				} else if s == "enter" {
+					m.focusIndex++
+					for ; m.focusIndex < len(m.inputs); m.focusIndex++ {
+						if len(m.inputs[m.inputKeys[m.focusIndex]].Input.Value()) == 0 {
+							break
+						}
+					}
 				} else {
 					m.focusIndex++
 				}
@@ -367,5 +383,5 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 		}
 	}
 
-	return b.String()
+	return wordwrap.String(b.String(), m.width)
 }
