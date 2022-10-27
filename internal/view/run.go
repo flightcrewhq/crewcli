@@ -175,17 +175,6 @@ func NewRunModel(params map[string]string) *runModel {
 	p.SetTotalPages(len(m.commands))
 	m.paginator = p
 
-	// if params.VirtualMachineName == "" {
-	// 	params.VirtualMachineName = "flightcrew-control-tower"
-	// }
-
-	// if params.Zone == "" {
-	// 	params.Zone = "us-central"
-	// }
-
-	// if params.TowerVersion == "" {
-	// 	params.TowerVersion = "latest"
-	// }
 	m.nextCommand()
 
 	return m

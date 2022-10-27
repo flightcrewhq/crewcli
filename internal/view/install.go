@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"flightcrew.io/cli/internal/debug"
+	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/style"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,7 +20,19 @@ const (
 	keyAPIToken          = "${API_TOKEN}"
 	keyIAMRole           = "${IAM_ROLE}"
 	keyIAMServiceAccount = "${SERVICE_ACCOUNT}"
+	keyIAMFile           = "${IAM_FILE}"
 )
+
+type wrappedInput struct {
+	Title    string
+	HelpText string
+	Required bool
+	Default  string
+	Input    textinput.Model
+	// If the value is to be converted, this is only valid when model.confirming is true.
+	Converted string
+	Error     string
+}
 
 type installModel struct {
 	params InstallParams
@@ -68,8 +81,6 @@ func NewInstallModel(params InstallParams) installModel {
 		params.TowerVersion = "latest"
 	}
 
-	const defaultWidth = 20
-
 	m := installModel{
 		params: params,
 		inputs: make(map[string]*wrappedInput),
@@ -81,6 +92,7 @@ func NewInstallModel(params InstallParams) installModel {
 			keyTowerVersion,
 			keyIAMServiceAccount,
 			keyIAMRole,
+			keyIAMFile,
 		},
 		logStatements: make([]string, 0),
 	}
@@ -163,6 +175,12 @@ func NewInstallModel(params InstallParams) installModel {
 			input.Input.SetValue("flightcrew.gae.read.only")
 			input.HelpText = "IAM Role is the name of the (to be created) IAM role defining permissions to run the Flightcrew Tower."
 
+		case keyIAMFile:
+			input.Title = "IAM File"
+			input.Default = "flightcrew.gae.read.only"
+			input.Input.SetValue("gcp/gae/iam_readonly.yaml")
+			input.HelpText = "IAM File provides the list of permissions to attach to the (to be created) IAM Role."
+
 		}
 
 		m.inputs[key] = input
@@ -223,18 +241,24 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if s == "enter" && m.focusIndex == len(m.inputs) {
 				if !m.confirming {
 					m.confirming = true
+					m.convertValues()
 					return m, nil
 				}
 
 				args := make(map[string]string)
 				for key, wInput := range m.inputs {
-					args[key] = wInput.Input.Value()
+					if len(wInput.Converted) > 0 {
+						args[key] = wInput.Converted
+					} else {
+						args[key] = wInput.Input.Value()
+					}
 				}
 
 				return NewRunModel(args), nil
 			} else if s == "enter" && m.focusIndex == len(m.inputs)+1 {
 				m.confirming = false
 				m.focusIndex = len(m.inputs)
+				m.resetConverted()
 				return m, nil
 			}
 
@@ -277,19 +301,19 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			cmds := make([]tea.Cmd, len(m.inputs))
-			for i := 0; i <= len(m.inputs)-1; i++ {
-				key := m.inputKeys[i]
+			for i := 0; i < len(m.inputs); i++ {
+				input := m.getInput(i)
 				if i == m.focusIndex {
 					// Set focused state
-					cmds[i] = m.inputs[key].Input.Focus()
-					m.inputs[key].Input.PromptStyle = style.Focused
-					m.inputs[key].Input.TextStyle = style.Focused
+					cmds[i] = input.Input.Focus()
+					input.Input.PromptStyle = style.Focused
+					input.Input.TextStyle = style.Focused
 					continue
 				}
 				// Remove focused state
-				m.inputs[key].Input.Blur()
-				m.inputs[key].Input.PromptStyle = style.None
-				m.inputs[key].Input.TextStyle = style.None
+				input.Input.Blur()
+				input.Input.PromptStyle = style.None
+				input.Input.TextStyle = style.None
 			}
 
 			return m, tea.Batch(cmds...)
@@ -325,9 +349,9 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	b.WriteString(desc)
 
 	for i := range m.inputKeys {
-		k := m.inputKeys[i]
-		b.WriteString(m.titleStyle.Render(m.inputs[k].Title))
-		if m.inputs[k].Required {
+		input := m.getInput(i)
+		b.WriteString(m.titleStyle.Render(input.Title))
+		if input.Required {
 			b.WriteString(style.Required("*"))
 		} else {
 			b.WriteRune(' ')
@@ -335,9 +359,18 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 		b.WriteString(": ")
 
 		if m.confirming {
-			b.WriteString(m.inputs[k].Input.Value())
+			b.WriteString(input.Input.Value())
+			if len(input.Converted) > 0 {
+				b.WriteString(" → ")
+				b.WriteString(input.Converted)
+			}
+
+			if len(input.Error) > 0 {
+				b.WriteString(" ❗️ ")
+				b.WriteString(input.Error)
+			}
 		} else {
-			b.WriteString(m.inputs[k].Input.View())
+			b.WriteString(input.Input.View())
 		}
 
 		b.WriteRune('\n')
@@ -376,4 +409,33 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	}
 
 	return wordwrap.String(b.String(), m.width)
+}
+
+func (m *installModel) getInput(i int) *wrappedInput {
+	k := m.inputKeys[i]
+	return m.inputs[k]
+}
+
+func (m *installModel) convertValues() {
+	for k, val := range m.inputs {
+		switch k {
+		case keyTowerVersion:
+			version, err := gcp.GetTowerImageVersion(val.Input.Value())
+			if err != nil {
+				val.Error = err.Error()
+				debug.Output("convert tower version got error: %v", err)
+				continue
+			}
+
+			val.Converted = version
+			debug.Output("convert tower version is %s", version)
+		}
+	}
+}
+
+func (m *installModel) resetConverted() {
+	for _, val := range m.inputs {
+		val.Converted = ""
+		val.Error = ""
+	}
 }
