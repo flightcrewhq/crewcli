@@ -373,7 +373,7 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 
 	b.WriteString(requiredStyle.Render("*"))
 	b.WriteString(" - required\n\n")
-	b.WriteString(helpStyle.Render("ctrl+c/esc: quit • ←/→/↑/↓: nav • ctrl+h: toggle description"))
+	b.WriteString(style.Help("ctrl+c/esc: quit • ←/→/↑/↓: nav • enter: proceed"))
 
 	if len(m.logStatements) > 0 {
 		b.WriteRune('\n')

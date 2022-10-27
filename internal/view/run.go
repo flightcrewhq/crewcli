@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"flightcrew.io/cli/internal/debug"
+	"flightcrew.io/cli/internal/style"
 	"github.com/charmbracelet/bubbles/paginator"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -85,11 +86,6 @@ func NewRunModel(params map[string]string) *runModel {
 		params:  params,
 		spinner: spin,
 		commands: []*CommandState{
-			{
-				Command:     `gcloud components update`,
-				State:       NoneState,
-				Description: `Upgrade your gcloud!`,
-			},
 			checkServiceAccount,
 			{
 				Command: `gcloud iam service-accounts create "${SERVICE_ACCOUNT}" \
@@ -330,11 +326,11 @@ func (m *runModel) View() string {
 
 	switch command.State {
 	case FailState:
-		b.WriteString(helpStyle.Render("(press any key to quit)"))
+		b.WriteString(style.Help("(press any key to quit)"))
 	case PassState:
-		b.WriteString(helpStyle.Render("(press any key to continue)"))
+		b.WriteString(style.Help("(press any key to continue)"))
 	default:
-		b.WriteString(helpStyle.Render("(ctrl+c or esc to quit | h/l page)"))
+		b.WriteString(style.Help("(ctrl+c or esc to quit | h/l page)"))
 	}
 
 	b.WriteRune('\n')
