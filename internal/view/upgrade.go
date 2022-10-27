@@ -17,7 +17,6 @@ if nc -w 1 -z $IP 22 ; then
 */
 
 var (
-	requiredStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("199"))
 	cursorStyle         = style.Focused.Copy()
 	cursorModeHelpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 

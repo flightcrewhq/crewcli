@@ -33,7 +33,10 @@ type installModel struct {
 
 	titleStyle lipgloss.Style
 
-	confirming bool
+	confirming       bool
+	submitButton     *Button
+	confirmYesButton *Button
+	confirmNoButton  *Button
 
 	defaultHelpText string
 
@@ -81,6 +84,10 @@ func NewInstallModel(params InstallParams) installModel {
 		},
 		logStatements: make([]string, 0),
 	}
+
+	m.submitButton, _ = NewButton("Submit", 12)
+	m.confirmYesButton, _ = NewButton("Continue", 12)
+	m.confirmNoButton, _ = NewButton("Edit", 12)
 
 	var maxTitleLength int
 
@@ -131,9 +138,8 @@ func NewInstallModel(params InstallParams) installModel {
 			if params.TowerVersion != "" {
 				input.Input.SetValue(params.TowerVersion)
 			}
-			input.Input.Placeholder = "latest"
+			input.Input.Placeholder = "stable"
 			input.Title = "Tower Version"
-			input.Default = "latest"
 			input.HelpText = "Tower Version is the version of the Tower image that will be installed. (recommended: `stable`)"
 
 		case keyAPIToken:
@@ -322,7 +328,7 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 		k := m.inputKeys[i]
 		b.WriteString(m.titleStyle.Render(m.inputs[k].Title))
 		if m.inputs[k].Required {
-			b.WriteString(requiredStyle.Render("*"))
+			b.WriteString(style.Required("*"))
 		} else {
 			b.WriteRune(' ')
 		}
@@ -348,30 +354,16 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	b.WriteString("\n\n")
 
 	if m.confirming {
-		if m.focusIndex == len(m.inputs) {
-			b.WriteString(style.Focused.Render(confirmYesText))
-		} else {
-			b.WriteString(style.Blurred.Render(confirmYesText))
-		}
-
+		b.WriteString(m.confirmYesButton.View(m.focusIndex == len(m.inputs)))
 		b.WriteRune(' ')
-
-		if m.focusIndex == len(m.inputs)+1 {
-			b.WriteString(style.Focused.Render(confirmNoText))
-		} else {
-			b.WriteString(style.Blurred.Render(confirmNoText))
-		}
+		b.WriteString(m.confirmNoButton.View(m.focusIndex == len(m.inputs)+1))
 	} else {
-		if m.focusIndex == len(m.inputs) {
-			b.WriteString(style.Focused.Render(submitText))
-		} else {
-			b.WriteString(style.Blurred.Render(submitText))
-		}
+		b.WriteString(m.submitButton.View(m.focusIndex == len(m.inputs)))
 	}
 
 	b.WriteString("\n\n")
 
-	b.WriteString(requiredStyle.Render("*"))
+	b.WriteString(style.Required("*"))
 	b.WriteString(" - required\n\n")
 	b.WriteString(style.Help("ctrl+c/esc: quit • ←/→/↑/↓: nav • enter: proceed"))
 

@@ -19,7 +19,8 @@ var (
 		Light: "#737675",
 		Dark:  "240",
 	}).Render
-	Action = lipgloss.NewStyle().Foreground(lipgloss.Color("#BF7EFF")).Bold(true).Render
+	Action   = lipgloss.NewStyle().Foreground(lipgloss.Color("#BF7EFF")).Bold(true).Render
+	Required = lipgloss.NewStyle().Foreground(lipgloss.Color("199")).Render
 
 	Glamour *glamour.TermRenderer
 )

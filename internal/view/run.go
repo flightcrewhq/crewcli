@@ -309,7 +309,7 @@ func (m *runModel) View() string {
 	b.WriteRune('\n')
 	b.WriteRune('\n')
 
-	b.WriteString(m.paginator.View())
+	b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render(m.paginator.View()))
 	b.WriteRune('\n')
 
 	b.WriteString(command.View(m.spinner))
@@ -324,13 +324,12 @@ func (m *runModel) View() string {
 		b.WriteRune('\n')
 	}
 
-	switch command.State {
-	case FailState:
+	if command.State == FailState && command.Mutate != nil {
 		b.WriteString(style.Help("(press any key to quit)"))
-	case PassState:
+	} else if command.State == PassState {
 		b.WriteString(style.Help("(press any key to continue)"))
-	default:
-		b.WriteString(style.Help("(ctrl+c or esc to quit | h/l page)"))
+	} else {
+		b.WriteString(style.Help("ctrl+c/esc: quit • h/l: page • ←/→/enter: run command"))
 	}
 
 	b.WriteRune('\n')
