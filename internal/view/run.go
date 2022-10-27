@@ -1,14 +1,14 @@
 package view
 
 import (
-	"bytes"
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
 
-	"flightcrew.io/cli/internal/style"
+	"flightcrew.io/cli/internal/debug"
+	"github.com/charmbracelet/bubbles/paginator"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -25,22 +25,12 @@ type cmdFinishedErr struct {
 	err error
 }
 
-type runState string
-
-const (
-	stateRun     runState = "run"
-	statePrompt  runState = "prompt"
-	stateSuccess runState = "success"
-	stateFailure runState = "failure"
-)
-
 type runModel struct {
-	params map[string]string
+	params    map[string]string
+	paginator paginator.Model
 
-	commands       []*commandState
-	currentIndex   int
-	state          runState
-	cmdOut, cmdErr bytes.Buffer
+	commands     []*CommandState
+	currentIndex int
 
 	userInput bool
 	yesButton *Button
@@ -48,15 +38,13 @@ type runModel struct {
 
 	spinner spinner.Model
 
-	// Used when state is Failure
-	errMessage string
-	cursorMode textinput.CursorMode
-}
+	quitting bool
 
-type runModelParams struct {
+	logStatements []string
 }
 
 func NewRunModel(params map[string]string) *runModel {
+	debug.Output("New run model time!")
 	const defaultWidth = 20
 	spin := spinner.New()
 	spin.Style = spinnerStyle
@@ -68,45 +56,98 @@ func NewRunModel(params map[string]string) *runModel {
 	noButton, err := NewButton("no", 10)
 	_ = err
 
-	checkIAMRole := &commandState{
+	checkServiceAccount := &CommandState{
+		Read: &ReadCommandState{
+			SuccessMessage: "Found a service account!",
+			FailureMessage: "No service account found. Next step is to create one.",
+		},
+		Command: `gcloud iam service-accounts describe --project="${GOOGLE_PROJECT_ID}" "${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" > /dev/null 2>&1`,
+		State:   NoneState,
+	}
+	checkIAMRole := &CommandState{
 		Command: `gcloud iam roles describe --project="${GOOGLE_PROJECT_ID}" "${IAM_ROLE}" >/dev/null 2>&1`,
+		Read: &ReadCommandState{
+			SuccessMessage: "Found the Flightcrew role!",
+			FailureMessage: "No IAM role found. Next step is to create one.",
+		},
+		State: NoneState,
+	}
+	checkVMExists := &CommandState{
+		Command: `gcloud compute instances list --format="csv(NAME,EXTERNAL_IP,STATUS)" --project=${GOOGLE_PROJECT_ID} --zones=${ZONE} | awk -F "," "/${VIRTUAL_MACHINE}/ {print f(2), f(3)} function f(n){return (\$n==\"\" ? \"null\" : \$n)}"`,
+		Read: &ReadCommandState{
+			SuccessMessage: "Flightcrew VM already exists! Aborting installation.",
+			FailureMessage: "No existing VM found. Continuing to installation.",
+		},
+		State: NoneState,
 	}
 
 	m := &runModel{
 		params:  params,
-		state:   statePrompt,
 		spinner: spin,
-		commands: []*commandState{
+		commands: []*CommandState{
 			{
-				SkipIfSucceed: &commandState{
-					Command: `gcloud iam service-accounts describe --project="${GOOGLE_PROJECT_ID}" "${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" > /dev/null 2>&1`,
-				},
+				Command:     `gcloud components update`,
+				State:       NoneState,
+				Description: `Upgrade your gcloud!`,
+			},
+			checkServiceAccount,
+			{
 				Command: `gcloud iam service-accounts create "${SERVICE_ACCOUNT}" \
 	--project="${GOOGLE_PROJECT_ID}" \
 	--display-name="${SERVICE_ACCOUNT}" \
 	--description="Runs Flightcrew's Control Tower VM."`,
-				Ran:         false,
+				State:       NoneState,
 				Description: `This command will create a service account, and follow-up commands will attach read and/or write permissions.`,
-				Link:        "https://cloud.google.com/iam/docs/creating-managing-service-accounts",
+				Mutate: &MutateCommandState{
+					SkipIfSucceed: checkServiceAccount,
+					Link:          "https://cloud.google.com/iam/docs/creating-managing-service-accounts",
+				},
 			},
+			checkIAMRole,
 			{
-				SkipIfSucceed: checkIAMRole,
 				Command: `gcloud iam roles create ${IAM_ROLE} \
 	--project=${GOOGLE_PROJECT_ID} \
 	--file=${IAM_FILE}
 `,
 				Description: `This command creates an IAM role from ${IAM_FILE} for the Flightcrew VM to access configs and monitoring data.`,
-				Link:        "https://cloud.google.com/iam/docs/understanding-custom-roles",
-				Ran:         false,
+				State:       NoneState,
+				Mutate: &MutateCommandState{
+					SkipIfSucceed: checkIAMRole,
+					Link:          "https://cloud.google.com/iam/docs/understanding-custom-roles",
+				},
 			},
 			{
-				SkipIfSucceed: checkIAMRole,
 				Command: `gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \\
 	--member=serviceAccount:"${SERVICE_ACCT_EMAIL}" \
 	--role="projects/${GOOGLE_PROJECT_ID}/roles/${IAM_ROLE}" \
 	--condition=None`,
 				Description: "This command attaches the IAM role to Flightcrew's service account, which will give the IAM permissions to a new VM.",
-				Link:        "https://cloud.google.com/iam/docs/granting-changing-revoking-access",
+				State:       NoneState,
+				Mutate: &MutateCommandState{
+					SkipIfSucceed: checkIAMRole,
+					Link:          "https://cloud.google.com/iam/docs/granting-changing-revoking-access",
+				},
+			},
+			checkVMExists,
+			{
+				Command: `gcloud compute instances create-with-container ${VIRTUAL_MACHINE} \
+	--project=${GOOGLE_PROJECT_ID} \
+	--container-command="/ko-app/tower" \
+	--container-image=${FULL_IMAGE_PATH} \
+	--container-arg="--debug=true" \
+	--container-env-file=${ENV_FILE} \
+	--container-env=FC_API_KEY=${FLIGHTCREW_TOKEN} \
+	--container-env=FC_PACKAGE_VERSION=${TOWER_IMAGE_VERSION} \
+	--machine-type=e2-micro \
+	--scopes=cloud-platform \
+	--service-account="${SERVICE_ACCT_EMAIL}" \
+	--tags=http-server \
+	--zone=${ZONE}`,
+				Description: "Create a VM instance attached to Flightcrew's service account, and run the Control Tower image.",
+				Mutate: &MutateCommandState{
+					SkipIfSucceed: checkVMExists,
+				},
+				State: NoneState,
 			},
 		},
 		yesButton: yesButton,
@@ -120,12 +161,24 @@ func NewRunModel(params map[string]string) *runModel {
 	replacer := strings.NewReplacer(replaceArgs...)
 
 	for i := range m.commands {
-		m.commands[i].Command = replacer.Replace(m.commands[i].Command)
-		m.commands[i].Description = replacer.Replace(m.commands[i].Description)
-		if m.commands[i].SkipIfSucceed != nil {
-			m.commands[i].SkipIfSucceed.Command = replacer.Replace(m.commands[i].SkipIfSucceed.Command)
-		}
+		command := m.commands[i]
+		command.State = NoneState
+		command.Command = replacer.Replace(command.Command)
+		command.Description = replacer.Replace(command.Description)
 	}
+
+	p := paginator.New()
+	p.Type = paginator.Dots
+	p.PerPage = 1
+	p.UseHLKeys = true
+	p.UseJKKeys = false
+	p.UseLeftRightKeys = false
+	p.UsePgUpPgDownKeys = false
+	p.UseUpDownKeys = false
+	p.ActiveDot = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "235", Dark: "252"}).Render("•")
+	p.InactiveDot = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "250", Dark: "238"}).Render("•")
+	p.SetTotalPages(len(m.commands))
+	m.paginator = p
 
 	// if params.VirtualMachineName == "" {
 	// 	params.VirtualMachineName = "flightcrew-control-tower"
@@ -154,6 +207,19 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Allow user to quit at any time.
 		case "ctrl+c", "esc":
 			return m, tea.Quit
+
+		case "h":
+			var cmd tea.Cmd
+			m.paginator, cmd = m.paginator.Update(msg)
+			return m, cmd
+
+		case "l":
+			// Don't allow user to advance to future commands that haven't been run or prompted yet.
+			if m.paginator.Page < m.currentIndex {
+				var cmd tea.Cmd
+				m.paginator, cmd = m.paginator.Update(msg)
+				return m, cmd
+			}
 		}
 
 	case spinner.TickMsg:
@@ -162,73 +228,75 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	switch m.state {
-	case statePrompt:
+	command := m.commands[m.currentIndex]
+	switch command.State {
+	case PromptState:
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			switch msg.String() {
 			case "enter":
-				if m.state == statePrompt && !m.userInput {
+				if command.State == PromptState && !m.userInput {
 					// TODO: Confirm quitting
 					return m, tea.Quit
 				}
 
-				if m.state == statePrompt && m.userInput {
-					m.state = stateRun
-
-					c := exec.Command("bash", "-c", fmtCommandForExec(m.commands[m.currentIndex].Command)) //nolint:gosec
-					c.Stdout = &m.cmdOut
-					c.Stderr = &m.cmdErr
-					return m, tea.ExecProcess(c, func(err error) tea.Msg {
+				if command.State == PromptState && m.userInput {
+					command.State = RunningState
+					return m, tea.Exec(NewExecCommand(command), func(err error) tea.Msg {
 						return cmdFinishedErr{err}
 					})
 				}
 
 			case "tab":
-				if m.state == statePrompt {
+				if command.State == PromptState {
 					m.userInput = !m.userInput
 				}
 
 			case "left":
-				if m.state == statePrompt && !m.userInput {
+				if command.State == PromptState && !m.userInput {
 					m.userInput = true
 				}
 
 			case "right":
-				if m.state == statePrompt && m.userInput {
+				if command.State == PromptState && m.userInput {
 					m.userInput = false
 				}
 			}
 		}
 
-	case stateRun:
+	case RunningState:
 		switch msg := msg.(type) {
 		case cmdFinishedErr:
-			m.commands[m.currentIndex].Ran = true
+			command := m.commands[m.currentIndex]
 
 			if msg.err != nil {
-				m.errMessage = msg.err.Error()
-				m.state = stateFailure
+				command.State = FailState
 				return m, nil
 			}
 
-			m.state = stateSuccess
+			command.State = PassState
 			return m, nil
 			// TODO if we're at the end --> go to another screen
 
 		}
 		return m, m.spinner.Tick
 
-	case stateSuccess:
+	case PassState:
 		switch msg.(type) {
 		case tea.KeyMsg:
-			_ = m.nextCommand()
-			// TODO: Proceed to the next part of the screen.
+			if m.quitting {
+				return m, tea.Quit
+			}
 
-			return m, nil
+			if !m.nextCommand() {
+				m.quitting = true
+				return m, nil
+			}
+
+			return m, m.spinner.Tick
 		}
 
-	case stateFailure:
+	case FailState:
 		switch msg.(type) {
 		case tea.KeyMsg:
 			return m, tea.Quit
@@ -240,50 +308,39 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *runModel) View() string {
 	var b strings.Builder
+	command := m.commands[m.paginator.Page]
 	b.WriteString("State is currently: ")
-	b.WriteString(string(m.state))
+	b.WriteString(string(command.State))
 	b.WriteRune('\n')
 	b.WriteRune('\n')
 
-	command := m.commands[m.currentIndex]
-	b.WriteString(command.View())
+	b.WriteString(m.paginator.View())
+	b.WriteRune('\n')
+
+	b.WriteString(command.View(m.spinner))
 	b.WriteString("\n\n")
-	switch m.state {
-	case stateRun:
-		b.WriteString("Running... ")
-		b.WriteString(m.spinner.View())
-		b.WriteRune('\n')
 
-		b.WriteString(ViewError(m.cmdOut.String(), m.cmdErr.String(), m.errMessage))
-
-	case statePrompt:
+	if command.State == PromptState {
 		b.WriteString("Run the command? ")
 		b.WriteString(m.yesButton.View(m.userInput))
 		b.WriteString("  ")
 		b.WriteString(m.noButton.View(!m.userInput))
 		b.WriteRune('\n')
+	}
 
-	case stateSuccess:
-		b.WriteString(style.Success("[SUCCESS]"))
-		b.WriteString(" Command completed.\n")
-
-		b.WriteString(ViewError(m.cmdOut.String(), m.cmdErr.String(), m.errMessage))
-
-	case stateFailure:
-		b.WriteString(style.Error("[ERROR]"))
-		b.WriteString(" Command failed:\n")
-
-		b.WriteString(ViewError(m.cmdOut.String(), m.cmdErr.String(), m.errMessage))
+	switch command.State {
+	case FailState:
+		b.WriteString(helpStyle.Render("(press any key to quit)"))
+	case PassState:
+		b.WriteString(helpStyle.Render("(press any key to continue)"))
+	default:
+		b.WriteString(helpStyle.Render("(ctrl+c or esc to quit | h/l page)"))
 	}
 
 	b.WriteRune('\n')
-	switch m.state {
-	case stateFailure:
-		b.WriteString(helpStyle.Render("(press any key to quit)"))
-	case stateSuccess:
-		b.WriteString(helpStyle.Render("(press any key to continue)"))
-	default:
-		b.WriteString(helpStyle.Render("(ctrl+c or esc to quit)"))
+	for _, str := range m.logStatements {
+		b.WriteString(str)
+		b.WriteRune('\n')
 	}
 
 	return b.String()
@@ -291,38 +348,53 @@ func (m *runModel) View() string {
 
 func (m *runModel) nextCommand() bool {
 	for ; m.currentIndex < len(m.commands); m.currentIndex++ {
+		m.paginator.Page = m.currentIndex
 		current := m.commands[m.currentIndex]
-		if current.Ran {
+		if current.State != NoneState {
+			m.logStatements = append(m.logStatements, fmt.Sprintf("command %d is not in state none: %s", m.currentIndex, current.State))
 			continue
 		}
 
-		prereq := current.SkipIfSucceed
-		if prereq == nil {
-			m.cmdErr.Reset()
-			m.cmdOut.Reset()
-			m.errMessage = ""
-			m.state = statePrompt
+		if current.Read != nil {
+			c := exec.Command("bash", "-c", fmtCommandForExec(current.Command)) //nolint:gosec
+			if err := c.Run(); err != nil {
+				current.State = FailState
+				continue
+			}
+
+			current.State = PassState
+			continue
+		}
+
+		if current.Mutate == nil {
+			current.State = PromptState
 			return true
 		}
 
-		if prereq.Ran && prereq.Succeeded {
+		prereq := current.Mutate.SkipIfSucceed
+		if prereq == nil || prereq.State == FailState {
+			current.State = PromptState
+			m.logStatements = append(m.logStatements, fmt.Sprintf("Returning true for command %d: failed or no prereq", m.currentIndex))
+			return true
+		}
+
+		if prereq.State == PassState {
+			current.State = SkipState
+			m.logStatements = append(m.logStatements, fmt.Sprintf("command %d's prereq is in state passed", m.currentIndex))
 			continue
 		}
 
-		if !prereq.Ran {
-			prereq.Ran = true
-
+		if prereq.State == NoneState {
 			c := exec.Command("bash", "-c", fmtCommandForExec(prereq.Command)) //nolint:gosec
 			if err := c.Run(); err != nil {
-				m.cmdErr.Reset()
-				m.cmdOut.Reset()
-				m.errMessage = ""
-				m.state = statePrompt
-				prereq.Succeeded = false
+				prereq.State = FailState
+				current.State = PromptState
+				m.logStatements = append(m.logStatements, fmt.Sprintf("Returning true for command %d: just failed prereq", m.currentIndex))
 				return true
 			}
 
-			prereq.Succeeded = true
+			m.logStatements = append(m.logStatements, fmt.Sprintf("Readonly command %d just passed", m.currentIndex))
+			prereq.State = PassState
 		}
 	}
 

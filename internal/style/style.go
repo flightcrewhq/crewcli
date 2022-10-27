@@ -10,8 +10,9 @@ var (
 	Blurred = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	None    = lipgloss.NewStyle()
 	Code    = lipgloss.NewStyle().Foreground(lipgloss.Color("#8CA5D8"))
-	Error   = lipgloss.NewStyle().Foreground(lipgloss.Color("#D88CA5")).Render
-	Success = lipgloss.NewStyle().Foreground(lipgloss.Color("#8CD8B2")).Render
+	Error   = lipgloss.NewStyle().Foreground(lipgloss.Color("#D88CA5")).Bold(true).Render
+	Success = lipgloss.NewStyle().Foreground(lipgloss.Color("#8CD8B2")).Bold(true).Render
+	Bold    = lipgloss.NewStyle().Bold(true).Render
 
 	Glamour *glamour.TermRenderer
 )

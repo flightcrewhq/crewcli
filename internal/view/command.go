@@ -4,84 +4,150 @@ import (
 	"strings"
 
 	"flightcrew.io/cli/internal/style"
+	"github.com/charmbracelet/bubbles/spinner"
 )
+
+type commandState string
 
 var (
-	cmdReplacer = strings.NewReplacer(
-		`\`, "",
-		"\n", "",
-		"\t", " ",
-	)
+	headerStdout string
+	headerStderr string
 )
 
-type commandState struct {
-	// If this command succeeds, then we should not run the actual command.
-	SkipIfSucceed *commandState
-	Command       string
-	Description   string
-	Link          string
-	Ran           bool
-	Succeeded     bool
+func init() {
+	var err error
+	if len(headerStdout) == 0 {
+		headerStdout, err = style.Glamour.Render("## stdout\n")
+		if err != nil {
+			panic(err)
+		}
+	}
+	if len(headerStderr) == 0 {
+		headerStderr, err = style.Glamour.Render("## stderr\n")
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
-func (s *commandState) View() string {
-	var b strings.Builder
+const (
+	NoneState    commandState = "none"
+	PromptState  commandState = "prompt"
+	RunningState commandState = "running"
+	SkipState    commandState = "skip"
+	PassState    commandState = "pass"
+	FailState    commandState = "fail"
+)
 
-	b.WriteString(s.Description)
-	b.WriteRune('\n')
-	b.WriteString(s.Link)
-	b.WriteRune('\n')
-	b.WriteString("```sh\n")
-	b.WriteString(s.Command)
-	b.WriteString("\n```\n")
+type CommandState struct {
+	Read         *ReadCommandState
+	Mutate       *MutateCommandState
+	State        commandState
+	Command      string
+	Description  string
+	Stdout       string
+	Stderr       string
+	ErrorMessage string
+}
 
-	out, err := style.Glamour.Render(b.String())
+type ReadCommandState struct {
+	SuccessMessage, FailureMessage string
+}
+
+type MutateCommandState struct {
+	// If this read-only command succeeds, then we should not run the actual command.
+	SkipIfSucceed *CommandState
+	Link          string
+}
+
+func (s *CommandState) View(spinner spinner.Model) string {
+	var descB strings.Builder
+
+	descB.WriteString(s.Description)
+	descB.WriteRune('\n')
+	if s.Mutate != nil && len(s.Mutate.Link) > 0 {
+		descB.WriteString(s.Mutate.Link)
+		descB.WriteRune('\n')
+	}
+	descB.WriteString("```sh\n")
+	descB.WriteString(s.Command)
+	descB.WriteString("\n```\n")
+
+	desc, err := style.Glamour.Render(descB.String())
 	if err != nil {
 		return err.Error()
 	}
 
-	return out
-}
+	var outB strings.Builder
+	outB.WriteString(desc)
 
-func ViewError(stdout, stderr, errMessage string) string {
-	var b strings.Builder
+	switch s.State {
+	case NoneState:
+
+	case SkipState:
+		outB.WriteRune('⏭')
+		outB.WriteRune(' ')
+		outB.WriteString(style.Bold("[SKIPPED] "))
+		outB.WriteString(s.Mutate.SkipIfSucceed.Read.SuccessMessage)
+
+	case RunningState:
+		outB.WriteString("Running... ")
+		outB.WriteString(spinner.View())
+		outB.WriteRune('\n')
+
+	case PassState:
+		outB.WriteString(style.Success("[SUCCESS]"))
+		outB.WriteString(" Command completed.\n\n")
+
+		if s.Read != nil &&
+			len(s.Read.SuccessMessage) > 0 {
+			outB.WriteString(s.Read.SuccessMessage)
+			outB.WriteRune('\n')
+		}
+
+	case FailState:
+		outB.WriteString(style.Error("[ERROR]"))
+		outB.WriteString(" Command failed.\n\n")
+
+		if s.Read != nil &&
+			len(s.Read.FailureMessage) > 0 {
+			outB.WriteString(s.Read.FailureMessage)
+			outB.WriteRune('\n')
+		}
+	}
+
 	var addNewline bool
+	stdout := s.Stdout
+	stderr := s.Stderr
 
 	if len(stdout) > 0 {
-		b.WriteString("## stdout\n\n```sh\n")
-		b.WriteString(stdout)
-		b.WriteString("```\n")
+		outB.WriteString(headerStdout)
+		outB.WriteRune('\n')
+		outB.WriteString(stdout)
+		outB.WriteRune('\n')
 		addNewline = true
 	}
 
 	if len(stderr) > 0 {
 		if addNewline {
-			b.WriteRune('\n')
+			outB.WriteRune('\n')
 			addNewline = false
 		}
-		b.WriteString("## stderr\n\n```sh\n")
-		b.WriteString(stderr)
-		b.WriteString("```\n")
+		outB.WriteString(headerStderr)
+		outB.WriteRune('\n')
+		outB.WriteString(stderr)
+		outB.WriteRune('\n')
 		addNewline = true
 	}
 
-	if len(errMessage) > 0 {
+	if len(s.ErrorMessage) > 0 {
 		if addNewline {
-			b.WriteRune('\n')
+			outB.WriteRune('\n')
 			addNewline = false
 		}
-		b.WriteString(errMessage)
-		b.WriteRune('\n')
+		outB.WriteString(s.ErrorMessage)
+		outB.WriteRune('\n')
 	}
 
-	out, err := style.Glamour.Render(b.String())
-	if err != nil {
-		return err.Error()
-	}
-
-	return out
-}
-
-func fmtCommandForExec(cmd string) string {
-	return cmdReplacer.Replace(cmd)
+	return outB.String()
 }

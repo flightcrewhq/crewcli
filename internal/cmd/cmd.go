@@ -120,7 +120,7 @@ var installCmd = &cobra.Command{
 			params.Token = token
 		}
 
-		p := tea.NewProgram(view.NewInstallModel(view.InstallParams{}))
+		p := tea.NewProgram(view.NewInstallModel(params))
 		if err := p.Start(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)

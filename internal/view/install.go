@@ -3,6 +3,7 @@ package view
 import (
 	"strings"
 
+	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/style"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -30,7 +31,9 @@ type installModel struct {
 
 	confirming bool
 
-	cursorMode textinput.CursorMode
+	defaultHelpText string
+
+	logStatements []string
 }
 
 type InstallParams struct {
@@ -45,6 +48,7 @@ type InstallParams struct {
 }
 
 func NewInstallModel(params InstallParams) installModel {
+	debug.Output("new install model!")
 	if params.VirtualMachineName == "" {
 		params.VirtualMachineName = "flightcrew-control-tower"
 	}
@@ -71,6 +75,7 @@ func NewInstallModel(params InstallParams) installModel {
 			keyIAMServiceAccount,
 			keyIAMRole,
 		},
+		logStatements: make([]string, 0),
 	}
 
 	var maxTitleLength int
@@ -84,7 +89,7 @@ func NewInstallModel(params InstallParams) installModel {
 
 		switch key {
 		case keyProject:
-			if params.ProjectName != "" {
+			if len(params.ProjectName) > 0 {
 				input.Input.SetValue(params.ProjectName)
 				input.Default = params.ProjectName
 			} else {
@@ -94,6 +99,7 @@ func NewInstallModel(params InstallParams) installModel {
 			input.Input.PromptStyle = style.Focused
 			input.Input.TextStyle = style.Focused
 			input.Title = "Project ID"
+			input.HelpText = "Project ID is the unique string identifier for your Google Cloud Platform project."
 			input.Required = true
 
 		case keyVirtualMachine:
@@ -105,6 +111,7 @@ func NewInstallModel(params InstallParams) installModel {
 			input.Title = "VM Name"
 			input.Default = "flightcrew-control-tower"
 			input.Required = true
+			input.HelpText = "VM Name is what the (to be installed) Flightcrew virtual machine instance will be named."
 
 		case keyZone:
 			if params.Zone != "" {
@@ -114,29 +121,37 @@ func NewInstallModel(params InstallParams) installModel {
 			input.Input.CharLimit = 32
 			input.Title = "Zone"
 			input.Default = "us-central"
+			input.HelpText = "Zone is the Google zone where the (to be installed) Flightcrew virtual machine instance will be located."
 
 		case keyTowerVersion:
 			if params.TowerVersion != "" {
 				input.Input.SetValue(params.TowerVersion)
 			}
 			input.Input.Placeholder = "latest"
-			input.Title = "Version"
+			input.Title = "Tower Version"
 			input.Default = "latest"
+			input.HelpText = "Tower Version is the version of the Tower image that will be installed. (recommended: `stable`)"
 
 		case keyAPIToken:
+			if len(params.Token) > 0 {
+				input.Input.SetValue(params.Token)
+			}
 			input.Input.Placeholder = "api-token"
 			input.Title = "API Token"
-			//			input.HelpText = "This is the API token provided by Flightcrew to identify your organization."
+			input.Required = true
+			input.HelpText = "API token is the value provided by Flightcrew to identify your organization."
 
 		case keyIAMServiceAccount:
 			input.Title = "IAM Service Account"
 			input.Default = "flightcrew-runner-test-chris"
 			input.Input.SetValue("flightcrew-runner-test-chris")
+			input.HelpText = "IAM Service Account is the name of the (to be created) service account to run the Flightcrew Tower."
 
 		case keyIAMRole:
 			input.Title = "IAM Role"
 			input.Default = "flightcrew.gae.read.only"
 			input.Input.SetValue("flightcrew.gae.read.only")
+			input.HelpText = "IAM Role is the name of the (to be created) IAM role defining permissions to run the Flightcrew Tower."
 
 		}
 
@@ -144,6 +159,30 @@ func NewInstallModel(params InstallParams) installModel {
 
 		if titleLength := len(m.inputs[key].Title); titleLength > maxTitleLength {
 			maxTitleLength = titleLength
+		}
+	}
+
+	// Format help text.
+	wrappedText, _ := style.Glamour.Render("> Edit a particular entry to see help text here.")
+	m.defaultHelpText = strings.Trim(wrappedText, "\n")
+	defaultLines := strings.Count(m.defaultHelpText, "\n")
+	maxLines := defaultLines
+	lineCounts := make(map[string]int)
+	for k := range m.inputs {
+		wrappedText, _ := style.Glamour.Render("> " + m.inputs[k].HelpText)
+		m.inputs[k].HelpText = strings.Trim(wrappedText, "\n")
+		lineCounts[k] = strings.Count(m.inputs[k].HelpText, "\n")
+
+		if lineCounts[k] > maxLines {
+			maxLines = lineCounts[k]
+		}
+	}
+	if defaultDiff := maxLines - defaultLines; defaultDiff > 0 {
+		m.defaultHelpText += strings.Repeat("\n", defaultDiff)
+	}
+	for k := range m.inputs {
+		if diff := maxLines - lineCounts[k]; diff > 0 {
+			m.inputs[k].HelpText += strings.Repeat("\n", diff)
 		}
 	}
 
@@ -159,23 +198,13 @@ func (m installModel) Init() tea.Cmd {
 func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
+		s := msg.String()
+		switch s {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
 
-		// Change cursor mode
-		case "ctrl+r":
-			m.cursorMode = textinput.CursorBlink
-			cmds := make([]tea.Cmd, len(m.inputKeys))
-			for i, key := range m.inputKeys {
-				cmds[i] = m.inputs[key].Input.SetCursorMode(m.cursorMode)
-			}
-			return m, tea.Batch(cmds...)
-
 		// Set focus to next input
-		case "tab", "shift+tab", "enter", "up", "down":
-			s := msg.String()
-
+		case "tab", "shift+tab", "enter", "up", "down", "left", "right":
 			// Did the user press enter while the submit button was focused?
 			if s == "enter" && m.focusIndex == len(m.inputs) {
 				if !m.confirming {
@@ -195,23 +224,34 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			// Cycle indexes
-			if s == "up" || s == "shift+tab" {
-				m.focusIndex--
+			if !m.confirming {
+				if s == "up" || s == "shift+tab" {
+					m.focusIndex--
+				} else {
+					m.focusIndex++
+				}
 			} else {
-				m.focusIndex++
+				if s == "left" {
+					m.focusIndex--
+				} else if s == "right" {
+					m.focusIndex++
+				}
 			}
 
 			if m.focusIndex > len(m.inputs) {
-				if !m.confirming || m.focusIndex > len(m.inputs)+1 {
+				if m.confirming && m.focusIndex > len(m.inputs)+1 {
+					m.focusIndex = len(m.inputs) + 1
+				} else if !m.confirming {
 					m.focusIndex = 0
 				}
-			} else if m.focusIndex < 0 {
-				if m.confirming {
-					m.focusIndex = len(m.inputs) + 1
+			} else if m.confirming && m.focusIndex < len(m.inputs) {
+				m.focusIndex = len(m.inputs)
+			} else if !m.confirming && m.focusIndex < 0 {
+				m.focusIndex = len(m.inputs)
+			}
 
-				} else {
-					m.focusIndex = len(m.inputs)
-				}
+			if m.confirming {
+				break
 			}
 
 			cmds := make([]tea.Cmd, len(m.inputs))
@@ -256,6 +296,12 @@ func (m *installModel) updateInputs(msg tea.Msg) tea.Cmd {
 
 func (m installModel) View() string {
 	var b strings.Builder
+	desc, _ := style.Glamour.Render(`## Welcome!
+
+This is the Flightcrew installation CLI! To get started, please fill in the information below.`)
+
+	b.WriteString(desc)
+
 	for i := range m.inputKeys {
 		k := m.inputKeys[i]
 		b.WriteString(m.titleStyle.Render(m.inputs[k].Title))
@@ -272,13 +318,15 @@ func (m installModel) View() string {
 			b.WriteString(m.inputs[k].Input.View())
 		}
 
-		if len(m.inputs[k].HelpText) > 0 {
-			b.WriteRune('\n')
-			b.WriteString(helpStyle.Render(m.inputs[k].HelpText))
-		}
-		if i < len(m.inputs)-1 {
-			b.WriteRune('\n')
-		}
+		b.WriteRune('\n')
+	}
+
+	if m.focusIndex < len(m.inputKeys) {
+		b.WriteString(m.inputs[m.inputKeys[m.focusIndex]].HelpText)
+		b.WriteRune('\n')
+	} else if !m.confirming {
+		b.WriteString(m.defaultHelpText)
+		b.WriteRune('\n')
 	}
 
 	b.WriteString("\n\n")
@@ -309,9 +357,15 @@ func (m installModel) View() string {
 
 	b.WriteString(requiredStyle.Render("*"))
 	b.WriteString(" - required\n\n")
-	b.WriteString(helpStyle.Render("cursor mode is "))
-	b.WriteString(cursorModeHelpStyle.Render(m.cursorMode.String()))
-	b.WriteString(helpStyle.Render(" (ctrl+r to change style)"))
+	b.WriteString(helpStyle.Render("ctrl+c/esc: quit • ←/→/↑/↓: nav • ctrl+h: toggle description"))
+
+	if len(m.logStatements) > 0 {
+		b.WriteRune('\n')
+		for _, str := range m.logStatements {
+			b.WriteString(str)
+			b.WriteRune('\n')
+		}
+	}
 
 	return b.String()
 }
