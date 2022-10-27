@@ -14,10 +14,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const (
-	defaultWidth = 80
-)
-
 var (
 	spinnerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
 )
@@ -62,8 +58,9 @@ func NewRunModel(params map[string]string) *runModel {
 			SuccessMessage: "Found a service account!",
 			FailureMessage: "No service account found. Next step is to create one.",
 		},
-		Command: `gcloud iam service-accounts describe --project="${GOOGLE_PROJECT_ID}" "${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" > /dev/null 2>&1`,
-		State:   NoneState,
+		Command:     `gcloud iam service-accounts describe --project="${GOOGLE_PROJECT_ID}" "${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" > /dev/null 2>&1`,
+		State:       NoneState,
+		Description: "Check if a Flightcrew service account already exists or needs to be created.",
 	}
 	checkIAMRole := &CommandState{
 		Command: `gcloud iam roles describe --project="${GOOGLE_PROJECT_ID}" "${IAM_ROLE}" >/dev/null 2>&1`,
@@ -71,7 +68,8 @@ func NewRunModel(params map[string]string) *runModel {
 			SuccessMessage: "Found the Flightcrew role!",
 			FailureMessage: "No IAM role found. Next step is to create one.",
 		},
-		State: NoneState,
+		State:       NoneState,
+		Description: "Check if a Flightcrew IAM Role already exists or needs to be created.",
 	}
 	checkVMExists := &CommandState{
 		Command: `gcloud compute instances list --format="csv(NAME,EXTERNAL_IP,STATUS)" --project=${GOOGLE_PROJECT_ID} --zones=${ZONE} | awk -F "," "/${VIRTUAL_MACHINE}/ {print f(2), f(3)} function f(n){return (\$n==\"\" ? \"null\" : \$n)}"`,
@@ -79,7 +77,8 @@ func NewRunModel(params map[string]string) *runModel {
 			SuccessMessage: "Flightcrew VM already exists! Aborting installation.",
 			FailureMessage: "No existing VM found. Continuing to installation.",
 		},
-		State: NoneState,
+		State:       NoneState,
+		Description: "Check if a Flightcrew VM already exists or needs to be created.",
 	}
 
 	m := &runModel{
@@ -317,7 +316,8 @@ func (m *runModel) View() string {
 	b.WriteString("\n\n")
 
 	if command.State == PromptState {
-		b.WriteString("Run the command? ")
+		b.WriteString(style.Action("[ACTION REQUIRED]"))
+		b.WriteString(" Run the command? ")
 		b.WriteString(m.yesButton.View(m.userInput))
 		b.WriteString("  ")
 		b.WriteString(m.noButton.View(!m.userInput))

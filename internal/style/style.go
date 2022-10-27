@@ -5,6 +5,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const defaultWidth = 80
+
 var (
 	Focused = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Bold(true)
 	Blurred = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
@@ -13,10 +15,11 @@ var (
 	Error   = lipgloss.NewStyle().Foreground(lipgloss.Color("#D88CA5")).Bold(true).Render
 	Success = lipgloss.NewStyle().Foreground(lipgloss.Color("#8CD8B2")).Bold(true).Render
 	Bold    = lipgloss.NewStyle().Bold(true).Render
-	Help    = lipgloss.NewStyle().Padding(1, 0, 0, 2).Foreground(lipgloss.AdaptiveColor{
+	Help    = lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).PaddingTop(1).Width(defaultWidth).Foreground(lipgloss.AdaptiveColor{
 		Light: "#737675",
-		Dark:  "#D8DAD9",
+		Dark:  "240",
 	}).Render
+	Action = lipgloss.NewStyle().Foreground(lipgloss.Color("#BF7EFF")).Bold(true).Render
 
 	Glamour *glamour.TermRenderer
 )
@@ -27,7 +30,7 @@ func init() {
 		// detect background color and pick either the default dark or light theme
 		glamour.WithAutoStyle(),
 		// wrap output at specific width (default is 80)
-		glamour.WithWordWrap(80),
+		glamour.WithWordWrap(defaultWidth),
 	)
 
 	if err != nil {
