@@ -10,7 +10,7 @@ import (
 	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/style"
 	"flightcrew.io/cli/internal/view/button"
-	"flightcrew.io/cli/internal/view/radioinput"
+	"flightcrew.io/cli/internal/view/wrapinput"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -40,26 +40,13 @@ var (
 	)
 )
 
-type inputEntry struct {
-	Title    string
-	HelpText string
-	Required bool
-	Default  string
-	// If the value is to be converted, this is only valid when model.confirming is true.
-	Converted string
-	Message   string
-	Error     string
-	Freeform  textinput.Model
-	Radio     *radioinput.Model
-}
-
 type installModel struct {
 	params InstallParams
 
 	width  int
 	height int
 
-	inputs     map[string]*inputEntry
+	inputs     map[string]*wrapinput.Model
 	inputKeys  []string
 	focusIndex int
 	hasErrors  bool
@@ -107,7 +94,7 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 
 	m := installModel{
 		params: params,
-		inputs: make(map[string]*inputEntry),
+		inputs: make(map[string]*wrapinput.Model),
 		inputKeys: []string{
 			keyProject,
 			keyVirtualMachine,
@@ -133,31 +120,27 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 	var maxTitleLength int
 
 	for _, key := range m.inputKeys {
-		input := &inputEntry{
-			Freeform: textinput.New(),
-		}
-		input.Freeform.CursorStyle = style.Focused.Copy()
-		input.Freeform.CharLimit = 32
+		var input wrapinput.Model
 
 		switch key {
 		case keyProject:
+			input = wrapinput.NewFreeForm()
 			input.Freeform.CharLimit = 0
 			if len(params.ProjectName) > 0 {
-				input.Freeform.SetValue(params.ProjectName)
+				input.SetValue(params.ProjectName)
 				input.Default = params.ProjectName
 			} else {
 				input.Freeform.Placeholder = "project-id-1234"
 			}
-			input.Freeform.Focus()
-			input.Freeform.PromptStyle = style.Focused
-			input.Freeform.TextStyle = style.Focused
+			_ = input.Focus()
 			input.Title = "Project ID"
 			input.HelpText = "Project ID is the unique string identifier for your Google Cloud Platform project."
 			input.Required = true
 
 		case keyVirtualMachine:
+			input = wrapinput.NewFreeForm()
 			if params.VirtualMachineName != "" {
-				input.Freeform.SetValue(params.VirtualMachineName)
+				input.SetValue(params.VirtualMachineName)
 			}
 			input.Freeform.Placeholder = "flightcrew-control-tower"
 			input.Freeform.CharLimit = 64
@@ -167,8 +150,9 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 			input.HelpText = "VM Name is what the (to be installed) Flightcrew virtual machine instance will be named."
 
 		case keyZone:
+			input = wrapinput.NewFreeForm()
 			if params.Zone != "" {
-				input.Freeform.SetValue(params.Zone)
+				input.SetValue(params.Zone)
 			}
 			input.Freeform.Placeholder = "us-central"
 			input.Freeform.CharLimit = 32
@@ -177,16 +161,18 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 			input.HelpText = "Zone is the Google zone where the (to be installed) Flightcrew virtual machine instance will be located."
 
 		case keyTowerVersion:
+			input = wrapinput.NewFreeForm()
 			if params.TowerVersion != "" {
-				input.Freeform.SetValue(params.TowerVersion)
+				input.SetValue(params.TowerVersion)
 			}
 			input.Freeform.Placeholder = "stable"
 			input.Title = "Tower Version"
 			input.HelpText = "Tower Version is the version of the Tower image that will be installed. (recommended: `stable`)"
 
 		case keyAPIToken:
+			input = wrapinput.NewFreeForm()
 			if len(params.Token) > 0 {
-				input.Freeform.SetValue(params.Token)
+				input.SetValue(params.Token)
 			}
 			input.Freeform.Placeholder = "api-token"
 			input.Title = "API Token"
@@ -194,30 +180,32 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 			input.HelpText = "API token is the value provided by Flightcrew to identify your organization."
 
 		case keyIAMServiceAccount:
+			input = wrapinput.NewFreeForm()
 			input.Title = "Service Account"
 			input.Default = "flightcrew-runner-test-chris"
-			input.Freeform.SetValue("flightcrew-runner-test-chris")
+			input.SetValue("flightcrew-runner-test-chris")
 			input.HelpText = "Service Account is the name of the (to be created) IAM service account to run the Flightcrew Tower."
 
 		case keyPlatform:
-			input.Title = "Platform"
-			input.HelpText = "Platform is which Google Cloud Provider resources Flightcrew will read in."
-			radio := radioinput.NewModel([]string{
+			input = wrapinput.NewRadio([]string{
 				constants.GoogleAppEngineStdDisplay,
 				constants.GoogleComputeEngineDisplay})
+			input.Title = "Platform"
+			input.HelpText = "Platform is which Google Cloud Provider resources Flightcrew will read in."
+			radio := input.Radio
 			radio.SetPrevKeys([]string{"left"})
 			radio.SetNextKeys([]string{"right"})
-			input.Radio = &radio
 			if len(params.PlatformDisplayName) > 0 {
-				input.Radio.SetValue(params.PlatformDisplayName)
+				input.SetValue(params.PlatformDisplayName)
 			}
 
 		case keyPermissions:
-			input.Title = "Permissions"
-			input.HelpText = "Permissions is whether Flightcrew will only read in your resources, or if Flightcrew can modify (if you ask us to) your resources."
-			radio := radioinput.NewModel([]string{
+			input = wrapinput.NewRadio([]string{
 				constants.Read,
 				constants.Write})
+			input.Title = "Permissions"
+			input.HelpText = "Permissions is whether Flightcrew will only read in your resources, or if Flightcrew can modify (if you ask us to) your resources."
+			radio := input.Radio
 			radio.SetPrevKeys([]string{"left"})
 			radio.SetNextKeys([]string{"right"})
 			if params.ReadOnly {
@@ -225,11 +213,10 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 			} else {
 				radio.SetValue(constants.Write)
 			}
-			input.Radio = &radio
 
 		}
 
-		m.inputs[key] = input
+		m.inputs[key] = &input
 
 		if titleLength := len(m.inputs[key].Title); titleLength > maxTitleLength {
 			maxTitleLength = titleLength
@@ -299,13 +286,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 
 					for key, wInput := range m.inputs {
-						if len(wInput.Converted) > 0 {
-							m.args[key] = wInput.Converted
-						} else if wInput.Radio != nil {
-							m.args[key] = wInput.Radio.Value()
-						} else {
-							m.args[key] = wInput.Freeform.Value()
-						}
+						m.args[key] = wInput.Value()
 					}
 
 					return NewRunModel(m.args), nil
@@ -315,7 +296,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.confirming = false
 					m.hasErrors = false
 					m.focusIndex = len(m.inputs)
-					m.resetConverted()
+					m.resetValidation()
 					return m, nil
 				}
 
@@ -389,24 +370,13 @@ func (m *installModel) updateFocus() tea.Cmd {
 	for i := 0; i < len(m.inputs); i++ {
 		input := m.getInput(i)
 		if i == m.focusIndex {
-			if input.Radio != nil {
-				input.Radio.Focus()
-			} else {
-				// Set focused state
-				cmds = append(cmds, input.Freeform.Focus())
-				input.Freeform.PromptStyle = style.Focused
-				input.Freeform.TextStyle = style.Focused
+			if cmd := input.Focus(); cmd != nil {
+				cmds = append(cmds, cmd)
 			}
 			continue
 		}
-		// Remove focused state
-		if input.Radio != nil {
-			input.Radio.Blur()
-		} else {
-			input.Freeform.Blur()
-			input.Freeform.PromptStyle = style.None
-			input.Freeform.TextStyle = style.None
-		}
+
+		input.Blur()
 	}
 	return tea.Batch(cmds...)
 }
@@ -415,14 +385,10 @@ func (m *installModel) updateInputs(msg tea.Msg) tea.Cmd {
 	var cmds = make([]tea.Cmd, len(m.inputs))
 	var i int
 
-	// Only text inputs with Focus() set will respond, so it's safe to simply
+	// Only inputs with Focus() set will respond, so it's safe to simply
 	// update all of them here without any further logic.
-	for k, val := range m.inputs {
-		if m.inputs[k].Radio != nil {
-			*m.inputs[k].Radio, cmds[i] = m.inputs[k].Radio.Update(msg)
-		} else {
-			m.inputs[k].Freeform, cmds[i] = val.Freeform.Update(msg)
-		}
+	for k := range m.inputs {
+		*m.inputs[k], cmds[i] = m.inputs[k].Update(msg)
 		i++
 	}
 
@@ -438,41 +404,10 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	b.WriteString(desc)
 
 	for i := range m.inputKeys {
-		input := m.getInput(i)
-		b.WriteString(m.titleStyle.Render(input.Title))
-		if input.Required {
-			b.WriteString(style.Required("*"))
-		} else {
-			b.WriteRune(' ')
-		}
-		b.WriteString(": ")
-
-		if m.confirming {
-			if input.Radio != nil {
-				b.WriteString(input.Radio.Value())
-			} else {
-				b.WriteString(input.Freeform.Value())
-			}
-
-			if len(input.Error) > 0 {
-				b.WriteString(" ❗️ ")
-				b.WriteString(style.Error(input.Error))
-			} else if len(input.Message) > 0 {
-				b.WriteString(" → ")
-				b.WriteString(style.Convert(input.Message))
-			} else if len(input.Converted) > 0 {
-				b.WriteString(" → ")
-				b.WriteString(style.Convert(input.Converted))
-			}
-
-		} else {
-			if input.Radio != nil {
-				b.WriteString(input.Radio.View(m.focusIndex == i))
-			} else {
-				b.WriteString(input.Freeform.View())
-			}
-		}
-
+		b.WriteString(m.getInput(i).View(wrapinput.ViewParams{
+			ShowValue:  m.confirming,
+			TitleStyle: m.titleStyle,
+		}))
 		b.WriteRune('\n')
 	}
 
@@ -514,7 +449,7 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	// return wordwrap.String(b.String(), m.width)
 }
 
-func (m *installModel) getInput(i int) *inputEntry {
+func (m *installModel) getInput(i int) *wrapinput.Model {
 	k := m.inputKeys[i]
 	return m.inputs[k]
 }
@@ -523,14 +458,14 @@ func (m *installModel) convertValues() {
 	for k, val := range m.inputs {
 		if val.Required {
 			if val.Radio != nil &&
-				len(val.Radio.Value()) == 0 {
+				len(val.Value()) == 0 {
 				val.Error = "required"
 				m.hasErrors = true
 				continue
 			}
 
 			if val.Radio == nil &&
-				len(val.Freeform.Value()) == 0 {
+				len(val.Value()) == 0 {
 				val.Error = "required"
 				m.hasErrors = true
 				continue
@@ -539,7 +474,7 @@ func (m *installModel) convertValues() {
 
 		switch k {
 		case keyTowerVersion:
-			version, err := gcp.GetTowerImageVersion(val.Freeform.Value())
+			version, err := gcp.GetTowerImageVersion(val.Value())
 			if err != nil {
 				val.Error = err.Error()
 				debug.Output("convert tower version got error: %v", err)
@@ -550,7 +485,7 @@ func (m *installModel) convertValues() {
 			debug.Output("convert tower version is %s", version)
 
 		case keyPlatform:
-			displayName := val.Radio.Value()
+			displayName := val.Value()
 			platform, ok := constants.DisplayToPlatform[displayName]
 			if !ok {
 				val.Error = "invalid platform"
@@ -561,7 +496,7 @@ func (m *installModel) convertValues() {
 
 		case keyPermissions:
 			platformInput := m.inputs[keyPlatform]
-			platform, ok := constants.DisplayToPlatform[platformInput.Radio.Value()]
+			platform, ok := constants.DisplayToPlatform[platformInput.Value()]
 			if !ok {
 				break
 			}
@@ -572,10 +507,10 @@ func (m *installModel) convertValues() {
 				break
 			}
 
-			permission := val.Radio.Value()
+			permission := val.Value()
 			permSettings, ok := perms[permission]
 			if !ok {
-				val.Error = fmt.Sprintf("%s permissions are not supported for platform '%s'", permission, platformInput.Radio.Value())
+				val.Error = fmt.Sprintf("%s permissions are not supported for platform '%s'", permission, platformInput.Value())
 				break
 			}
 
@@ -611,22 +546,16 @@ func (m *installModel) convertValues() {
 	}
 }
 
-func (m *installModel) resetConverted() {
-	for _, val := range m.inputs {
-		val.Converted = ""
-		val.Error = ""
-		val.Message = ""
+func (m *installModel) resetValidation() {
+	for k := range m.inputs {
+		m.inputs[k].ResetValidation()
 	}
 }
 
 func (m *installModel) nextEmptyInput() {
 	for ; m.focusIndex < len(m.inputs); m.focusIndex++ {
 		input := m.getInput(m.focusIndex)
-		if input.Radio != nil {
-			if len(input.Radio.Value()) == 0 {
-				break
-			}
-		} else if len(input.Freeform.Value()) == 0 {
+		if len(input.Value()) == 0 {
 			break
 		}
 	}

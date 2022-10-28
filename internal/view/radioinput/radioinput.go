@@ -78,9 +78,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) View(focused bool) string {
+func (m Model) View() string {
 	var b strings.Builder
-	if focused {
+	if m.focused {
 		b.WriteString(style.Focused.Render("> "))
 	} else {
 		b.WriteString("> ")
@@ -89,7 +89,7 @@ func (m Model) View(focused bool) string {
 	numOpts := len(m.options)
 	for i, opt := range m.options {
 		if i == m.currentIndex {
-			if focused {
+			if m.focused {
 				b.WriteString(style.Highlight(opt))
 			} else {
 				b.WriteString(style.BlurHighlight(opt))
