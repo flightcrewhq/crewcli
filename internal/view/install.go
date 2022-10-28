@@ -1,6 +1,7 @@
 package view
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -456,77 +457,71 @@ func (m *installModel) getInput(i int) *wrapinput.Model {
 
 func (m *installModel) convertValues() {
 	for k, val := range m.inputs {
-		if val.Required {
-			if val.Radio != nil &&
-				len(val.Value()) == 0 {
-				val.Error = "required"
+		setError := func(err error) bool {
+			if err != nil {
+				val.SetError(err)
 				m.hasErrors = true
-				continue
+				return true
 			}
+			return false
+		}
 
-			if val.Radio == nil &&
-				len(val.Value()) == 0 {
-				val.Error = "required"
-				m.hasErrors = true
-				continue
-			}
+		if val.Required && len(val.Value()) == 0 {
+			setError(errors.New("required"))
+			continue
 		}
 
 		switch k {
 		case keyTowerVersion:
 			version, err := gcp.GetTowerImageVersion(val.Value())
-			if err != nil {
-				val.Error = err.Error()
+			if setError(err) {
 				debug.Output("convert tower version got error: %v", err)
 				break
 			}
 
-			val.Converted = version
+			val.SetConverted(version)
 			debug.Output("convert tower version is %s", version)
 
 		case keyPlatform:
 			displayName := val.Value()
 			platform, ok := constants.DisplayToPlatform[displayName]
 			if !ok {
-				val.Error = "invalid platform"
+				setError(errors.New("invalid platform"))
 				break
 			}
 
-			val.Converted = platform
+			val.SetConverted(platform)
 
 		case keyPermissions:
 			platformInput := m.inputs[keyPlatform]
 			platform, ok := constants.DisplayToPlatform[platformInput.Value()]
 			if !ok {
+				// Validation of this field occurs in keyPlatform.
 				break
 			}
 
 			perms, ok := constants.PlatformPermissions[platform]
 			if !ok {
-				val.Error = "platform has no permissions"
+				setError(errors.New("platform has no permissions"))
 				break
 			}
 
 			permission := val.Value()
 			permSettings, ok := perms[permission]
 			if !ok {
-				val.Error = fmt.Sprintf("%s permissions are not supported for platform '%s'", permission, platformInput.Value())
+				setError(fmt.Errorf("%s permissions are not supported for platform '%s'", permission, platformInput.Value()))
 				break
 			}
 
 			f, err := os.CreateTemp(m.tempDir, filenameReplacer.Replace(fmt.Sprintf("%s_%s", permission, platform)))
 			if err != nil {
-				val.Error = "create temp file to put permissions YAML"
+				setError(fmt.Errorf("failed to create temp file to put permissions YAML"))
 				break
 			}
+			defer f.Close()
 
 			if _, err := f.WriteString(permSettings.Content); err != nil {
-				val.Error = err.Error()
-				break
-			}
-
-			if err := f.Close(); err != nil {
-				val.Error = err.Error()
+				setError(fmt.Errorf("failed to write permissions YAML to temp file: %w", err))
 				break
 			}
 
@@ -534,14 +529,9 @@ func (m *installModel) convertValues() {
 				m.args[keyTrafficRouter] = fmt.Sprintf(`
   --container-env=TRAFFIC_ROUTER=%s \`, platform)
 			}
-
 			m.args[keyIAMFile] = f.Name()
 			m.args[keyIAMRole] = permSettings.Role
-			val.Message = fmt.Sprintf("see %s", f.Name())
-		}
-
-		if len(val.Error) > 0 {
-			m.hasErrors = true
+			val.SetInfo(fmt.Sprintf("see %s", f.Name()))
 		}
 	}
 }

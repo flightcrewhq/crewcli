@@ -10,17 +10,25 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type ValidateParams struct {
+	Converted    string
+	InfoMessage  string
+	ErrorMessage string
+}
+
 type Model struct {
 	Title    string
 	HelpText string
 	Required bool
 	Default  string
 	// If the value is to be converted, this is only valid when model.confirming is true.
-	Converted string
-	Message   string
-	Error     string
-	Freeform  *textinput.Model
-	Radio     *radioinput.Model
+
+	validating bool
+	validation ValidateParams
+
+	// Types of inputs. Pointers so that we can tell which one is being used.
+	Freeform *textinput.Model
+	Radio    *radioinput.Model
 }
 
 func NewRadio(options []string) Model {
@@ -62,15 +70,15 @@ func (m Model) View(params ViewParams) string {
 			b.WriteString(m.Freeform.Value())
 		}
 
-		if len(m.Error) > 0 {
+		if len(m.validation.ErrorMessage) > 0 {
 			b.WriteString(" ❗️ ")
-			b.WriteString(style.Error(m.Error))
-		} else if len(m.Message) > 0 {
+			b.WriteString(style.Error(m.validation.ErrorMessage))
+		} else if len(m.validation.InfoMessage) > 0 {
 			b.WriteString(" → ")
-			b.WriteString(style.Convert(m.Message))
-		} else if len(m.Converted) > 0 {
+			b.WriteString(style.Convert(m.validation.InfoMessage))
+		} else if len(m.validation.Converted) > 0 {
 			b.WriteString(" → ")
-			b.WriteString(style.Convert(m.Converted))
+			b.WriteString(style.Convert(m.validation.Converted))
 		}
 
 	} else {
@@ -136,8 +144,8 @@ func (m Model) Value() string {
 	}
 
 	if m.Freeform != nil {
-		if len(m.Converted) > 0 {
-			return m.Converted
+		if len(m.validation.Converted) > 0 {
+			return m.validation.Converted
 		}
 
 		if val := m.Freeform.Value(); len(val) > 0 {
@@ -150,11 +158,24 @@ func (m Model) Value() string {
 	return ""
 }
 
-func (m *Model) Validate() {
+func (m *Model) SetInfo(infoMsg string) {
+	m.validating = true
+	m.validation.InfoMessage = infoMsg
+}
+
+func (m *Model) SetConverted(convertedVal string) {
+	m.validating = true
+	m.validation.Converted = convertedVal
+}
+
+func (m *Model) SetError(err error) {
+	m.validating = true
+	if err != nil {
+		m.validation.ErrorMessage = err.Error()
+	}
 }
 
 func (m *Model) ResetValidation() {
-	m.Converted = ""
-	m.Error = ""
-	m.Message = ""
+	m.validating = false
+	m.validation = ValidateParams{}
 }
