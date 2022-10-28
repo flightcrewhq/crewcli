@@ -112,7 +112,7 @@ func NewInstallModel(params InstallParams) installModel {
 		input := &inputEntry{
 			Freeform: textinput.New(),
 		}
-		input.Freeform.CursorStyle = cursorStyle
+		input.Freeform.CursorStyle = style.Focused.Copy()
 		input.Freeform.CharLimit = 32
 
 		switch key {
