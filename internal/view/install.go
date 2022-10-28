@@ -26,6 +26,7 @@ const (
 	keyPermissions       = "${PERMISSIONS}"
 	keyRPCHost           = "${RPC_HOST}"
 	keyPlatform          = "${PLATFORM}"
+	keyTrafficRouter     = "${TRAFFIC_ROUTER}"
 )
 
 var (
@@ -125,6 +126,7 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 	m.tempDir = tempDir
 	m.args = make(map[string]string)
 	m.args[keyRPCHost] = "api.flightcrew.io"
+	m.args[keyTrafficRouter] = ""
 
 	var maxTitleLength int
 
@@ -578,6 +580,11 @@ func (m *installModel) convertValues() {
 			if err := f.Close(); err != nil {
 				val.Error = err.Error()
 				break
+			}
+
+			if permission == constants.Write {
+				m.args[keyTrafficRouter] = fmt.Sprintf(`
+  --container-env=TRAFFIC_ROUTER=%s \`, platform)
 			}
 
 			m.args[keyIAMFile] = f.Name()

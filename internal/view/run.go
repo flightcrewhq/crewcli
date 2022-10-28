@@ -110,7 +110,8 @@ func NewRunModel(params map[string]string) *runModel {
 	--container-arg="--debug=true" \
 	--container-env-file=${ENV_FILE} \
 	--container-env=FC_API_KEY=${API_TOKEN} \
-	--container-env=FC_PACKAGE_VERSION=${TOWER_VERSION} \
+	--container-env=CLOUD_PLATFORM=${PLATFORM} \
+	--container-env=FC_PACKAGE_VERSION=${TOWER_VERSION} \${TRAFFIC_ROUTER}
 	--container-env=METRIC_PROVIDERS=stackdriver \
 	--container-env=FC_RPC_CONNECT_HOST=${RPC_HOST} \
 	--container-env=FC_RPC_CONNECT_PORT=443 \
@@ -123,6 +124,16 @@ func NewRunModel(params map[string]string) *runModel {
 				Description: "Create a VM instance attached to Flightcrew's service account, and run the Control Tower image.\n\nYou can open `${ENV_FILE}` to edit your desired environment variables before you run this command.",
 				Mutate: &MutateCommandState{
 					SkipIfSucceed: checkVMExists,
+				},
+			},
+			{
+				Command: `gcloud compute instances add-metadata ${VIRTUAL_MACHINE} \
+	--project=${GOOGLE_PROJECT_ID} \
+	--zone=${ZONE}  \
+	--metadata=google-logging-enabled=false`,
+				Description: "Disable the VM's builtin logger because it has a memory leak and will cause the VM to crash after 1-2 weeks.",
+				Mutate: &MutateCommandState{
+					Link: "https://serverfault.com/questions/980569/disable-fluentd-on-on-container-optimized-os-gce",
 				},
 			},
 		},
