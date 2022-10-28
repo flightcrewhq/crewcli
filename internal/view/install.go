@@ -60,14 +60,16 @@ type installModel struct {
 }
 
 type InstallParams struct {
-	VirtualMachineName string
-	ProjectName        string
-	Zone               string
-	TowerVersion       string
-	Token              string
-	IAMRole            string
-	IAMFile            string
-	ServiceAccount     string
+	VirtualMachineName  string
+	ProjectName         string
+	Zone                string
+	TowerVersion        string
+	Token               string
+	IAMRole             string
+	IAMFile             string
+	ServiceAccount      string
+	PlatformDisplayName string
+	ReadOnly            bool
 }
 
 func NewInstallModel(params InstallParams) installModel {
@@ -190,11 +192,20 @@ func NewInstallModel(params InstallParams) installModel {
 			input.Title = "Platform"
 			input.HelpText = "Platform is which Google Cloud Provider resources Flightcrew will read in."
 			input.Selector = NewHorizontalSelector([]string{"App Engine", "Compute Engine"})
+			if len(params.PlatformDisplayName) > 0 {
+				input.Selector.SetValue(params.PlatformDisplayName)
+			}
 
 		case keyPermissions:
 			input.Title = "Permissions"
 			input.HelpText = "Permissions is whether Flightcrew will only read in your resources, or if Flightcrew can modify (if you ask us to) your resources."
 			input.Selector = NewHorizontalSelector([]string{"Read", "Write"})
+			if params.ReadOnly {
+				input.Selector.SetValue("Read")
+			} else {
+				input.Selector.SetValue("Write")
+			}
+
 		}
 
 		m.inputs[key] = input

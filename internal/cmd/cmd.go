@@ -6,7 +6,9 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
+	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/view"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,11 +17,12 @@ import (
 
 func init() {
 	installCmd.Flags().StringP("token", "t", "", "The Flightcrew API token to identify your organization.")
-	installCmd.Flags().StringP("image_version", "v", "latest", "The Flightcrew image version to install.")
+	installCmd.Flags().StringP("image_version", "v", "stable", "The Flightcrew image version to install.")
 	installCmd.Flags().StringP("vm", "", "flightcrew-control-tower", "The name of the VM that will be created for the Flightcrew tower in your project.")
 	installCmd.Flags().BoolP("readonly", "r", true, "Whether the Flightcrew tower should be readonly (true) or read-write (false).")
 	installCmd.Flags().StringP("project", "p", "", "specify your Google Cloud Platform project name")
 	installCmd.Flags().StringP("zone", "l", "us-central", "The zone to put your Tower in.")
+	installCmd.Flags().StringP("platform", "c", "gae_std", "specify what type of resources you want to manage. (gae_std, gce)")
 }
 
 // Do runs the command logic.
@@ -120,6 +123,19 @@ var installCmd = &cobra.Command{
 			params.Token = token
 		}
 
+		if platformKey := cmd.Flag("platform").Value.String(); platformKey != "" {
+			displayName, ok := constants.KeyToDisplay[platformKey]
+			if !ok {
+				desired := make([]string, 0, len(constants.KeyToDisplay))
+				for k := range constants.KeyToDisplay {
+					desired = append(desired, k)
+				}
+				return fmt.Errorf("invalid --platform flag: %s", strings.Join(desired, ", "))
+			}
+
+			params.PlatformDisplayName = displayName
+		}
+
 		p := tea.NewProgram(view.NewInstallModel(params))
 		if err := p.Start(); err != nil {
 			fmt.Println(err)
@@ -133,7 +149,7 @@ var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "Upgrade an existing Flightcrew tower in Google Cloud Provider (GCP) to another version.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return fmt.Errorf("uninstall is not yet implemented")
+		return fmt.Errorf("upgrade is not yet implemented")
 	},
 }
 

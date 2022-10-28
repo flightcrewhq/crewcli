@@ -1,6 +1,7 @@
 package view
 
 import (
+	"fmt"
 	"strings"
 
 	"flightcrew.io/cli/internal/style"
@@ -34,6 +35,16 @@ func (s *HorizontalSelector) MoveRight() {
 	if s.currentIndex >= len(s.options) {
 		s.currentIndex = 0
 	}
+}
+
+func (s *HorizontalSelector) SetValue(val string) {
+	for i := 0; i < len(s.options); i++ {
+		if s.options[i] == val {
+			s.currentIndex = i
+			return
+		}
+	}
+	panic(fmt.Sprintf("Invalid default value passed in. Got '%s', but only have '%s'", val, strings.Join(s.options, "', '")))
 }
 
 func (s *HorizontalSelector) View(focused bool) string {
