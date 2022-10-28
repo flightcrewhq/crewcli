@@ -105,7 +105,6 @@ func (s *CommandState) View() string {
 	case FailState:
 		if s.Read != nil &&
 			len(s.Read.FailureMessage) > 0 {
-			outB.WriteString("Command returned error: ")
 			outB.WriteString(s.Read.FailureMessage)
 			outB.WriteRune('\n')
 		} else {

@@ -24,6 +24,7 @@ const (
 	keyIAMServiceAccount = "${SERVICE_ACCOUNT}"
 	keyIAMFile           = "${IAM_FILE}"
 	keyPermissions       = "${PERMISSIONS}"
+	keyRPCHost           = "${RPC_HOST}"
 	keyPlatform          = "${PLATFORM}"
 )
 
@@ -43,6 +44,7 @@ type inputEntry struct {
 	Default  string
 	// If the value is to be converted, this is only valid when model.confirming is true.
 	Converted string
+	Message   string
 	Error     string
 	Freeform  textinput.Model
 	Selector  *HorizontalSelector
@@ -122,6 +124,7 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 
 	m.tempDir = tempDir
 	m.args = make(map[string]string)
+	m.args[keyRPCHost] = "api.flightcrew.io"
 
 	var maxTitleLength int
 
@@ -435,15 +438,18 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 			} else {
 				b.WriteString(input.Freeform.Value())
 			}
-			if len(input.Converted) > 0 {
-				b.WriteString(" → ")
-				b.WriteString(style.Convert(input.Converted))
-			}
 
 			if len(input.Error) > 0 {
 				b.WriteString(" ❗️ ")
 				b.WriteString(style.Error(input.Error))
+			} else if len(input.Message) > 0 {
+				b.WriteString(" → ")
+				b.WriteString(style.Convert(input.Message))
+			} else if len(input.Converted) > 0 {
+				b.WriteString(" → ")
+				b.WriteString(style.Convert(input.Converted))
 			}
+
 		} else {
 			if input.Selector != nil {
 				b.WriteString(input.Selector.View(m.focusIndex == i))
@@ -576,7 +582,7 @@ func (m *installModel) convertValues() {
 
 			m.args[keyIAMFile] = f.Name()
 			m.args[keyIAMRole] = permSettings.Role
-			val.Converted = fmt.Sprintf("see %s", f.Name())
+			val.Message = fmt.Sprintf("see %s", f.Name())
 		}
 
 		if len(val.Error) > 0 {
@@ -589,6 +595,7 @@ func (m *installModel) resetConverted() {
 	for _, val := range m.inputs {
 		val.Converted = ""
 		val.Error = ""
+		val.Message = ""
 	}
 }
 

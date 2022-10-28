@@ -102,6 +102,7 @@ func NewRunModel(params map[string]string) *runModel {
 			},
 			checkVMExists,
 			{
+				// TODO(chris): Switch between prod and dev
 				Command: `gcloud compute instances create-with-container ${VIRTUAL_MACHINE} \
 	--project=${GOOGLE_PROJECT_ID} \
 	--container-command="/ko-app/tower" \
@@ -110,6 +111,10 @@ func NewRunModel(params map[string]string) *runModel {
 	--container-env-file=${ENV_FILE} \
 	--container-env=FC_API_KEY=${API_TOKEN} \
 	--container-env=FC_PACKAGE_VERSION=${TOWER_VERSION} \
+	--container-env=METRIC_PROVIDERS=stackdriver \
+	--container-env=FC_RPC_CONNECT_HOST=${RPC_HOST} \
+	--container-env=FC_RPC_CONNECT_PORT=443 \
+	--container-env=FC_TOWER_PORT=8080 \
 	--machine-type=e2-micro \
 	--scopes=cloud-platform \
 	--service-account="${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
