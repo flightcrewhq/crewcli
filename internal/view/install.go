@@ -12,7 +12,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/reflow/wordwrap"
 )
 
 const (
@@ -136,6 +135,7 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 
 		switch key {
 		case keyProject:
+			input.Freeform.CharLimit = 0
 			if len(params.ProjectName) > 0 {
 				input.Freeform.SetValue(params.ProjectName)
 				input.Default = params.ProjectName
@@ -269,6 +269,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		s := msg.String()
+		cmds := make([]tea.Cmd, 0)
 		switch s {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
@@ -342,6 +343,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if input.Selector != nil {
 						input.Selector.MoveLeft()
 					}
+					cmds = append(cmds, m.updateInputs(msg))
 				}
 
 			case "right":
@@ -352,6 +354,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if input.Selector != nil {
 						input.Selector.MoveRight()
 					}
+					cmds = append(cmds, m.updateInputs(msg))
 				}
 			}
 
@@ -371,7 +374,8 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 
-			return m, m.updateFocus()
+			cmds = append(cmds, m.updateFocus())
+			return m, tea.Batch(cmds...)
 		}
 	}
 
@@ -492,7 +496,8 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 		}
 	}
 
-	return wordwrap.String(b.String(), m.width)
+	return b.String()
+	// return wordwrap.String(b.String(), m.width)
 }
 
 func (m *installModel) getInput(i int) *inputEntry {

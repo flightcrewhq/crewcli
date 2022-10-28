@@ -101,8 +101,6 @@ var installCmd = &cobra.Command{
 		//	os.Exit(1)
 		//}
 
-		ctx := context.Background()
-
 		if err := gcp.InitArtifactRegistry(); err != nil {
 			return fmt.Errorf("init artifact registry: %w", err)
 		}
@@ -111,9 +109,8 @@ var installCmd = &cobra.Command{
 
 		params.ProjectName = *projectFlag
 		if len(params.ProjectName) == 0 {
-			if project, err := gcp.GetCurrentProject(ctx); err == nil {
-				fmt.Println("project retrieved from context")
-				params.ProjectName = project
+			if projects, err := gcp.GetProjectsFromEnvironment(); err == nil {
+				params.ProjectName = strings.Join(projects, ",")
 			}
 		}
 		params.Zone = *zoneFlag
