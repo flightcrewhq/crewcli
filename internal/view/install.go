@@ -30,6 +30,7 @@ const (
 	keyRPCHost           = "${RPC_HOST}"
 	keyPlatform          = "${PLATFORM}"
 	keyTrafficRouter     = "${TRAFFIC_ROUTER}"
+	keyImagePath         = "${IMAGE_PATH}"
 )
 
 var (
@@ -531,6 +532,7 @@ func (m *installModel) convertValues() {
 			}
 			m.args[keyIAMFile] = f.Name()
 			m.args[keyIAMRole] = permSettings.Role
+			m.args[keyImagePath] = gcp.ImagePath
 			val.SetInfo(fmt.Sprintf("see %s", f.Name()))
 		}
 	}

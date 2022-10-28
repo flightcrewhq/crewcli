@@ -11,7 +11,7 @@ import (
 
 var (
 	ArtifactRegistryService *registry.Service
-	imagePath               = "us-west1-docker.pkg.dev/flightcrew-artifacts/client/tower"
+	ImagePath               = "us-west1-docker.pkg.dev/flightcrew-artifacts/client/tower"
 	versionRE               = regexp.MustCompile(`[0-9]+\.[0-9]+\.[0-9]+`)
 )
 
