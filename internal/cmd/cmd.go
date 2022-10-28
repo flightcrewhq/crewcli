@@ -136,12 +136,20 @@ var installCmd = &cobra.Command{
 			params.PlatformDisplayName = displayName
 		}
 
-		p := tea.NewProgram(view.NewInstallModel(params))
+		dir, err := os.MkdirTemp("", "flightcrew-install-*")
+		if err != nil {
+			return fmt.Errorf("create temp dir for installation: %v", err)
+		}
+		defer func() {
+			err = os.RemoveAll(dir)
+		}()
+
+		p := tea.NewProgram(view.NewInstallModel(params, dir))
 		if err := p.Start(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		return nil
+		return err
 	},
 }
 

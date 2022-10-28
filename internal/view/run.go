@@ -51,11 +51,10 @@ func NewRunModel(params map[string]string) *runModel {
 
 	checkServiceAccount := &CommandState{
 		Read: &ReadCommandState{
-			SuccessMessage: "Found a service account!",
+			SuccessMessage: "This service account already exists.",
 			FailureMessage: "No service account found. Next step is to create one.",
 		},
 		Command:     `gcloud iam service-accounts describe --project="${GOOGLE_PROJECT_ID}" "${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" > /dev/null 2>&1`,
-		State:       NoneState,
 		Description: "Check if a Flightcrew service account already exists or needs to be created.",
 	}
 	checkIAMRole := &CommandState{
@@ -64,7 +63,6 @@ func NewRunModel(params map[string]string) *runModel {
 			SuccessMessage: "Found the Flightcrew role!",
 			FailureMessage: "No IAM role found. Next step is to create one.",
 		},
-		State:       NoneState,
 		Description: "Check if a Flightcrew IAM Role already exists or needs to be created.",
 	}
 	checkVMExists := &CommandState{
@@ -73,7 +71,6 @@ func NewRunModel(params map[string]string) *runModel {
 			SuccessMessage: "Flightcrew VM already exists! Aborting installation.",
 			FailureMessage: "No existing VM found. Continuing to installation.",
 		},
-		State:       NoneState,
 		Description: "Check if a Flightcrew VM already exists or needs to be created.",
 	}
 
@@ -87,7 +84,6 @@ func NewRunModel(params map[string]string) *runModel {
 	--project="${GOOGLE_PROJECT_ID}" \
 	--display-name="${SERVICE_ACCOUNT}" \
 	--description="Runs Flightcrew's Control Tower VM."`,
-				State:       NoneState,
 				Description: `This command will create a service account, and follow-up commands will attach read and/or write permissions.`,
 				Mutate: &MutateCommandState{
 					SkipIfSucceed: checkServiceAccount,
@@ -100,20 +96,18 @@ func NewRunModel(params map[string]string) *runModel {
 	--project=${GOOGLE_PROJECT_ID} \
 	--file=${IAM_FILE}
 `,
-				Description: `This command creates an IAM role from ${IAM_FILE} for the Flightcrew VM to access configs and monitoring data.`,
-				State:       NoneState,
+				Description: "This command creates an IAM role from `${IAM_FILE}` for the Flightcrew VM to access configs and monitoring data.",
 				Mutate: &MutateCommandState{
 					SkipIfSucceed: checkIAMRole,
 					Link:          "https://cloud.google.com/iam/docs/understanding-custom-roles",
 				},
 			},
 			{
-				Command: `gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \\
-	--member=serviceAccount:"${SERVICE_ACCT_EMAIL}" \
+				Command: `gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
+	--member=serviceAccount:"${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
 	--role="projects/${GOOGLE_PROJECT_ID}/roles/${IAM_ROLE}" \
 	--condition=None`,
 				Description: "This command attaches the IAM role to Flightcrew's service account, which will give the IAM permissions to a new VM.",
-				State:       NoneState,
 				Mutate: &MutateCommandState{
 					SkipIfSucceed: checkIAMRole,
 					Link:          "https://cloud.google.com/iam/docs/granting-changing-revoking-access",
@@ -124,21 +118,20 @@ func NewRunModel(params map[string]string) *runModel {
 				Command: `gcloud compute instances create-with-container ${VIRTUAL_MACHINE} \
 	--project=${GOOGLE_PROJECT_ID} \
 	--container-command="/ko-app/tower" \
-	--container-image=${FULL_IMAGE_PATH} \
+	--container-image=${IMAGE_PATH}:${TOWER_VERSION} \
 	--container-arg="--debug=true" \
 	--container-env-file=${ENV_FILE} \
-	--container-env=FC_API_KEY=${FLIGHTCREW_TOKEN} \
-	--container-env=FC_PACKAGE_VERSION=${TOWER_IMAGE_VERSION} \
+	--container-env=FC_API_KEY=${API_TOKEN} \
+	--container-env=FC_PACKAGE_VERSION=${TOWER_VERSION} \
 	--machine-type=e2-micro \
 	--scopes=cloud-platform \
-	--service-account="${SERVICE_ACCT_EMAIL}" \
+	--service-account="${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
 	--tags=http-server \
 	--zone=${ZONE}`,
-				Description: "Create a VM instance attached to Flightcrew's service account, and run the Control Tower image.",
+				Description: "Create a VM instance attached to Flightcrew's service account, and run the Control Tower image.\n\nYou can open `${ENV_FILE}` to edit your desired environment variables before you run this command.",
 				Mutate: &MutateCommandState{
 					SkipIfSucceed: checkVMExists,
 				},
-				State: NoneState,
 			},
 		},
 		yesButton: yesButton,

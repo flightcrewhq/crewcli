@@ -97,12 +97,12 @@ func (s *CommandState) View(spinner spinner.Model) string {
 
 	case PassState:
 		outB.WriteString(style.Success("[SUCCESS]"))
-		outB.WriteString(" Command completed.\n\n")
-
-		if s.Read != nil &&
-			len(s.Read.SuccessMessage) > 0 {
+		if s.Read != nil && len(s.Read.SuccessMessage) > 0 {
+			outB.WriteRune(' ')
 			outB.WriteString(s.Read.SuccessMessage)
 			outB.WriteRune('\n')
+		} else {
+			outB.WriteString(" Command completed.\n")
 		}
 
 	case FailState:

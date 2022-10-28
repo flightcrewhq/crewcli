@@ -2,6 +2,7 @@ package view
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"flightcrew.io/cli/internal/constants"
@@ -25,6 +26,15 @@ const (
 	keyIAMFile           = "${IAM_FILE}"
 	keyPermissions       = "${PERMISSIONS}"
 	keyPlatform          = "${PLATFORM}"
+)
+
+var (
+	filenameReplacer = strings.NewReplacer(
+		".", "_",
+		"/", "_",
+		":", "_",
+		" ", "_",
+	)
 )
 
 type inputEntry struct {
@@ -58,6 +68,8 @@ type installModel struct {
 	confirmNoButton  *Button
 
 	defaultHelpText string
+	tempDir         string
+	args            map[string]string
 
 	logStatements []string
 }
@@ -75,7 +87,7 @@ type InstallParams struct {
 	ReadOnly            bool
 }
 
-func NewInstallModel(params InstallParams) installModel {
+func NewInstallModel(params InstallParams, tempDir string) installModel {
 	debug.Output("new install model!")
 	if params.VirtualMachineName == "" {
 		params.VirtualMachineName = "flightcrew-control-tower"
@@ -109,6 +121,9 @@ func NewInstallModel(params InstallParams) installModel {
 	m.submitButton, _ = NewButton("Submit", 12)
 	m.confirmYesButton, _ = NewButton("Continue", 12)
 	m.confirmNoButton, _ = NewButton("Edit", 12)
+
+	m.tempDir = tempDir
+	m.args = make(map[string]string)
 
 	var maxTitleLength int
 
@@ -272,18 +287,17 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, nil
 					}
 
-					args := make(map[string]string)
 					for key, wInput := range m.inputs {
 						if len(wInput.Converted) > 0 {
-							args[key] = wInput.Converted
+							m.args[key] = wInput.Converted
 						} else if wInput.Selector != nil {
-							args[key] = wInput.Selector.Value()
+							m.args[key] = wInput.Selector.Value()
 						} else {
-							args[key] = wInput.Freeform.Value()
+							m.args[key] = wInput.Freeform.Value()
 						}
 					}
 
-					return NewRunModel(args), nil
+					return NewRunModel(m.args), nil
 				}
 
 				if m.focusIndex == len(m.inputs)+1 {
@@ -494,7 +508,7 @@ func (m *installModel) convertValues() {
 			if err != nil {
 				val.Error = err.Error()
 				debug.Output("convert tower version got error: %v", err)
-				continue
+				break
 			}
 
 			val.Converted = version
@@ -505,7 +519,7 @@ func (m *installModel) convertValues() {
 			platform, ok := constants.DisplayToPlatform[displayName]
 			if !ok {
 				val.Error = "invalid platform"
-				continue
+				break
 			}
 
 			val.Converted = platform
@@ -514,20 +528,40 @@ func (m *installModel) convertValues() {
 			platformInput := m.inputs[keyPlatform]
 			platform, ok := constants.DisplayToPlatform[platformInput.Selector.Value()]
 			if !ok {
-				continue
+				break
 			}
 
 			perms, ok := constants.PlatformPermissions[platform]
 			if !ok {
 				val.Error = "platform has no permissions"
-				continue
+				break
 			}
 
-			_, ok = perms[val.Selector.Value()]
+			permission := val.Selector.Value()
+			permYAML, ok := perms[permission]
 			if !ok {
-				val.Error = fmt.Sprintf("%s permissions are not supported for platform '%s'", val.Selector.Value(), platformInput.Selector.Value())
-
+				val.Error = fmt.Sprintf("%s permissions are not supported for platform '%s'", permission, platformInput.Selector.Value())
+				break
 			}
+
+			f, err := os.CreateTemp(m.tempDir, filenameReplacer.Replace(fmt.Sprintf("%s_%s", platform, permission)))
+			if err != nil {
+				val.Error = "create temp file to put permissions YAML"
+				break
+			}
+
+			if _, err := f.WriteString(permYAML); err != nil {
+				val.Error = err.Error()
+				break
+			}
+
+			if err := f.Close(); err != nil {
+				val.Error = err.Error()
+				break
+			}
+
+			m.args[keyIAMFile] = f.Name()
+			val.Converted = fmt.Sprintf("see %s", f.Name())
 		}
 
 		if len(val.Error) > 0 {
