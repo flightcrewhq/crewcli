@@ -112,7 +112,6 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 			keyZone,
 			keyTowerVersion,
 			keyIAMServiceAccount,
-			keyIAMRole,
 		},
 		logStatements: make([]string, 0),
 	}
@@ -188,16 +187,10 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 			input.HelpText = "API token is the value provided by Flightcrew to identify your organization."
 
 		case keyIAMServiceAccount:
-			input.Title = "IAM Service Account"
+			input.Title = "Service Account"
 			input.Default = "flightcrew-runner-test-chris"
 			input.Freeform.SetValue("flightcrew-runner-test-chris")
-			input.HelpText = "IAM Service Account is the name of the (to be created) service account to run the Flightcrew Tower."
-
-		case keyIAMRole:
-			input.Title = "IAM Role"
-			input.Default = "flightcrew.gae.read.only"
-			input.Freeform.SetValue("flightcrew.gae.read.only")
-			input.HelpText = "IAM Role is the name of the (to be created) IAM role defining permissions to run the Flightcrew Tower."
+			input.HelpText = "Service Account is the name of the (to be created) IAM service account to run the Flightcrew Tower."
 
 		case keyPlatform:
 			input.Title = "Platform"
@@ -250,7 +243,7 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 		}
 	}
 
-	m.titleStyle = lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength)
+	m.titleStyle = lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength).PaddingLeft(2)
 	m.nextEmptyInput()
 	m.updateFocus()
 
@@ -559,7 +552,7 @@ func (m *installModel) convertValues() {
 			}
 
 			permission := val.Selector.Value()
-			permYAML, ok := perms[permission]
+			permSettings, ok := perms[permission]
 			if !ok {
 				val.Error = fmt.Sprintf("%s permissions are not supported for platform '%s'", permission, platformInput.Selector.Value())
 				break
@@ -571,7 +564,7 @@ func (m *installModel) convertValues() {
 				break
 			}
 
-			if _, err := f.WriteString(permYAML); err != nil {
+			if _, err := f.WriteString(permSettings.Content); err != nil {
 				val.Error = err.Error()
 				break
 			}
@@ -582,6 +575,7 @@ func (m *installModel) convertValues() {
 			}
 
 			m.args[keyIAMFile] = f.Name()
+			m.args[keyIAMRole] = permSettings.Role
 			val.Converted = fmt.Sprintf("see %s", f.Name())
 		}
 

@@ -13,6 +13,11 @@ const (
 	Write = "Write"
 )
 
+type Permissions struct {
+	Content string
+	Role    string
+}
+
 var (
 	KeyToDisplay = map[string]string{
 		GoogleAppEngineStdKey:  GoogleAppEngineStdDisplay,
@@ -22,9 +27,11 @@ var (
 		GoogleAppEngineStdDisplay:  GoogleAppEngineStdPlatform,
 		GoogleComputeEngineDisplay: GoogleComputeEnginePlatform,
 	}
-	PlatformPermissions = map[string]map[string]string{
+	PlatformPermissions = map[string]map[string]*Permissions{
 		GoogleAppEngineStdPlatform: {
-			Read: `title: Flightcrew AppEngine (Read-Only)
+			Read: &Permissions{
+				Role: "flightcrew.gae_std.read.only",
+				Content: `title: Flightcrew AppEngine (Read-Only)
 description: Grants Flightcrew's Control Tower VM read access to AppEngine configs and monitoring.
 stage: ALPHA
 # These permissions are pared down from those specified in the GCP docs
@@ -47,8 +54,11 @@ includedPermissions:
 - monitoring.metricDescriptors.get
 - monitoring.metricDescriptors.list
 - monitoring.timeSeries.list`,
+			},
 
-			Write: `title: Flightcrew AppEngine (Write)
+			Write: &Permissions{
+				Role: "flightcrew.gae_std.read.write",
+				Content: `title: Flightcrew AppEngine (Write)
 description: Grants Flightcrew's Control Tower VM write access to AppEngine configs and monitoring.
 stage: ALPHA
 # These permissions add to the Read-Only role to deploy new AppEngine versions.
@@ -73,10 +83,13 @@ includedPermissions:
 - storage.objects.delete
 - logging.logEntries.create
 - iam.serviceAccounts.actAs`,
+			},
 		},
 
 		GoogleComputeEnginePlatform: {
-			Read: `title: Flightcrew GCE (Read-Only)
+			Read: &Permissions{
+				Role: "flightcrew.gce.read.only",
+				Content: `title: Flightcrew GCE (Read-Only)
 description: Grants Flightcrew read access to GCE VM instance configs and monitoring.
 stage: ALPHA
 # These permissions are pared down from those specified in the GCP docs:
@@ -90,6 +103,7 @@ includedPermissions:
 - monitoring.metricDescriptors.get
 - monitoring.metricDescriptors.list
 - monitoring.timeSeries.list`,
+			},
 		},
 	}
 )
