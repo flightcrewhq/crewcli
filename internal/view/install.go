@@ -243,7 +243,7 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 		}
 	}
 
-	m.titleStyle = lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength).PaddingLeft(2)
+	m.titleStyle = lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength).MarginLeft(2)
 	m.nextEmptyInput()
 	m.updateFocus()
 
@@ -342,7 +342,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "right":
 				if m.confirming {
 					m.focusIndex++
-				} else {
+				} else if m.focusIndex < len(m.inputs) {
 					input := m.getInput(m.focusIndex)
 					if input.Selector != nil {
 						input.Selector.MoveRight()
