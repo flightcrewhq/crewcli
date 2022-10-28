@@ -380,12 +380,12 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *installModel) updateFocus() tea.Cmd {
-	cmds := make([]tea.Cmd, len(m.inputs))
+	cmds := make([]tea.Cmd, 0, len(m.inputs))
 	for i := 0; i < len(m.inputs); i++ {
 		input := m.getInput(i)
 		if i == m.focusIndex {
 			// Set focused state
-			cmds[i] = input.Freeform.Focus()
+			cmds = append(cmds, input.Freeform.Focus())
 			input.Freeform.PromptStyle = style.Focused
 			input.Freeform.TextStyle = style.Focused
 			continue
@@ -405,7 +405,7 @@ func (m *installModel) updateInputs(msg tea.Msg) tea.Cmd {
 	// Only text inputs with Focus() set will respond, so it's safe to simply
 	// update all of them here without any further logic.
 	for k, val := range m.inputs {
-		if m.inputs[k].Selector != nil {
+		if m.inputs[k].Selector == nil {
 			m.inputs[k].Freeform, cmds[i] = val.Freeform.Update(msg)
 		}
 		i++
@@ -502,6 +502,22 @@ func (m *installModel) getInput(i int) *inputEntry {
 
 func (m *installModel) convertValues() {
 	for k, val := range m.inputs {
+		if val.Required {
+			if val.Selector != nil &&
+				len(val.Selector.Value()) == 0 {
+				val.Error = "required"
+				m.hasErrors = true
+				continue
+			}
+
+			if val.Selector == nil &&
+				len(val.Freeform.Value()) == 0 {
+				val.Error = "required"
+				m.hasErrors = true
+				continue
+			}
+		}
+
 		switch k {
 		case keyTowerVersion:
 			version, err := gcp.GetTowerImageVersion(val.Freeform.Value())
