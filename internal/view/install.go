@@ -251,57 +251,87 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Set focus to next input
 		case "tab", "shift+tab", "enter", "up", "down", "left", "right":
-			// Did the user press enter while the submit button was focused?
-			if s == "enter" && m.focusIndex == len(m.inputs) {
-				if !m.confirming {
-					m.confirming = true
-					m.convertValues()
+			switch s {
+			case "enter":
+				if m.focusIndex == len(m.inputs) {
+					if !m.confirming {
+						m.confirming = true
+						m.convertValues()
+						return m, nil
+					}
+
+					args := make(map[string]string)
+					for key, wInput := range m.inputs {
+						if len(wInput.Converted) > 0 {
+							args[key] = wInput.Converted
+						} else if wInput.Selector != nil {
+							args[key] = wInput.Selector.Value()
+						} else {
+							args[key] = wInput.Freeform.Value()
+						}
+					}
+
+					return NewRunModel(args), nil
+				}
+
+				if m.focusIndex == len(m.inputs)+1 {
+					m.confirming = false
+					m.focusIndex = len(m.inputs)
+					m.resetConverted()
 					return m, nil
 				}
 
-				args := make(map[string]string)
-				for key, wInput := range m.inputs {
-					if len(wInput.Converted) > 0 {
-						args[key] = wInput.Converted
-					} else if wInput.Selector != nil {
-						args[key] = wInput.Selector.Value()
-					} else {
-						args[key] = wInput.Freeform.Value()
+				m.focusIndex++
+				for ; m.focusIndex < len(m.inputs); m.focusIndex++ {
+					input := m.getInput(m.focusIndex)
+					if input.Selector != nil {
+						if len(input.Selector.Value()) == 0 {
+							break
+						}
+					} else if len(input.Freeform.Value()) == 0 {
+						break
 					}
 				}
 
-				return NewRunModel(args), nil
-			} else if s == "enter" && m.focusIndex == len(m.inputs)+1 {
-				m.confirming = false
-				m.focusIndex = len(m.inputs)
-				m.resetConverted()
-				return m, nil
-			}
-
-			// Cycle indexes
-			if !m.confirming {
-				if s == "up" || s == "shift+tab" {
+			case "up", "shift+tab":
+				if !m.confirming {
 					m.focusIndex--
-				} else if s == "enter" {
+				}
+
+			case "down":
+				if !m.confirming {
 					m.focusIndex++
-					for ; m.focusIndex < len(m.inputs); m.focusIndex++ {
-						input := m.getInput(m.focusIndex)
-						if input.Selector != nil {
-							if len(input.Selector.Value()) == 0 {
-								break
-							}
-						} else if len(input.Freeform.Value()) == 0 {
-							break
-						}
+				}
+
+			case "tab":
+				if m.confirming {
+					if m.focusIndex == len(m.inputs)+1 {
+						m.focusIndex = len(m.inputs)
+					} else if m.focusIndex == len(m.inputs) {
+						m.focusIndex = len(m.inputs) + 1
 					}
 				} else {
 					m.focusIndex++
 				}
-			} else {
-				if s == "left" {
+
+			case "left":
+				if m.confirming {
 					m.focusIndex--
-				} else if s == "right" {
+				} else {
+					input := m.getInput(m.focusIndex)
+					if input.Selector != nil {
+						input.Selector.MoveLeft()
+					}
+				}
+
+			case "right":
+				if m.confirming {
 					m.focusIndex++
+				} else {
+					input := m.getInput(m.focusIndex)
+					if input.Selector != nil {
+						input.Selector.MoveRight()
+					}
 				}
 			}
 
