@@ -10,6 +10,7 @@ import (
 	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/style"
 	"flightcrew.io/cli/internal/view/button"
+	"flightcrew.io/cli/internal/view/radioinput"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -49,7 +50,7 @@ type inputEntry struct {
 	Message   string
 	Error     string
 	Freeform  textinput.Model
-	Selector  *HorizontalSelector
+	Radio     *radioinput.Model
 }
 
 type installModel struct {
@@ -201,20 +202,30 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 		case keyPlatform:
 			input.Title = "Platform"
 			input.HelpText = "Platform is which Google Cloud Provider resources Flightcrew will read in."
-			input.Selector = NewHorizontalSelector([]string{"App Engine", "Compute Engine"})
+			radio := radioinput.NewModel([]string{
+				constants.GoogleAppEngineStdDisplay,
+				constants.GoogleComputeEngineDisplay})
+			radio.SetPrevKeys([]string{"left"})
+			radio.SetNextKeys([]string{"right"})
+			input.Radio = &radio
 			if len(params.PlatformDisplayName) > 0 {
-				input.Selector.SetValue(params.PlatformDisplayName)
+				input.Radio.SetValue(params.PlatformDisplayName)
 			}
 
 		case keyPermissions:
 			input.Title = "Permissions"
 			input.HelpText = "Permissions is whether Flightcrew will only read in your resources, or if Flightcrew can modify (if you ask us to) your resources."
-			input.Selector = NewHorizontalSelector([]string{constants.Read, constants.Write})
+			radio := radioinput.NewModel([]string{
+				constants.Read,
+				constants.Write})
+			radio.SetPrevKeys([]string{"left"})
+			radio.SetNextKeys([]string{"right"})
 			if params.ReadOnly {
-				input.Selector.SetValue(constants.Read)
+				radio.SetValue(constants.Read)
 			} else {
-				input.Selector.SetValue(constants.Write)
+				radio.SetValue(constants.Write)
 			}
+			input.Radio = &radio
 
 		}
 
@@ -290,8 +301,8 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					for key, wInput := range m.inputs {
 						if len(wInput.Converted) > 0 {
 							m.args[key] = wInput.Converted
-						} else if wInput.Selector != nil {
-							m.args[key] = wInput.Selector.Value()
+						} else if wInput.Radio != nil {
+							m.args[key] = wInput.Radio.Value()
 						} else {
 							m.args[key] = wInput.Freeform.Value()
 						}
@@ -337,23 +348,11 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if !m.hasErrors {
 						m.focusIndex--
 					}
-				} else if m.focusIndex < len(m.inputs) {
-					input := m.getInput(m.focusIndex)
-					if input.Selector != nil {
-						input.Selector.MoveLeft()
-					}
-					cmds = append(cmds, m.updateInputs(msg))
 				}
 
 			case "right":
 				if m.confirming {
 					m.focusIndex++
-				} else if m.focusIndex < len(m.inputs) {
-					input := m.getInput(m.focusIndex)
-					if input.Selector != nil {
-						input.Selector.MoveRight()
-					}
-					cmds = append(cmds, m.updateInputs(msg))
 				}
 			}
 
@@ -374,6 +373,9 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			cmds = append(cmds, m.updateFocus())
+			if m.focusIndex < len(m.inputs) {
+				cmds = append(cmds, m.updateInputs(msg))
+			}
 			return m, tea.Batch(cmds...)
 		}
 	}
@@ -387,16 +389,24 @@ func (m *installModel) updateFocus() tea.Cmd {
 	for i := 0; i < len(m.inputs); i++ {
 		input := m.getInput(i)
 		if i == m.focusIndex {
-			// Set focused state
-			cmds = append(cmds, input.Freeform.Focus())
-			input.Freeform.PromptStyle = style.Focused
-			input.Freeform.TextStyle = style.Focused
+			if input.Radio != nil {
+				input.Radio.Focus()
+			} else {
+				// Set focused state
+				cmds = append(cmds, input.Freeform.Focus())
+				input.Freeform.PromptStyle = style.Focused
+				input.Freeform.TextStyle = style.Focused
+			}
 			continue
 		}
 		// Remove focused state
-		input.Freeform.Blur()
-		input.Freeform.PromptStyle = style.None
-		input.Freeform.TextStyle = style.None
+		if input.Radio != nil {
+			input.Radio.Blur()
+		} else {
+			input.Freeform.Blur()
+			input.Freeform.PromptStyle = style.None
+			input.Freeform.TextStyle = style.None
+		}
 	}
 	return tea.Batch(cmds...)
 }
@@ -408,7 +418,9 @@ func (m *installModel) updateInputs(msg tea.Msg) tea.Cmd {
 	// Only text inputs with Focus() set will respond, so it's safe to simply
 	// update all of them here without any further logic.
 	for k, val := range m.inputs {
-		if m.inputs[k].Selector == nil {
+		if m.inputs[k].Radio != nil {
+			*m.inputs[k].Radio, cmds[i] = m.inputs[k].Radio.Update(msg)
+		} else {
 			m.inputs[k].Freeform, cmds[i] = val.Freeform.Update(msg)
 		}
 		i++
@@ -436,8 +448,8 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 		b.WriteString(": ")
 
 		if m.confirming {
-			if input.Selector != nil {
-				b.WriteString(input.Selector.Value())
+			if input.Radio != nil {
+				b.WriteString(input.Radio.Value())
 			} else {
 				b.WriteString(input.Freeform.Value())
 			}
@@ -454,8 +466,8 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 			}
 
 		} else {
-			if input.Selector != nil {
-				b.WriteString(input.Selector.View(m.focusIndex == i))
+			if input.Radio != nil {
+				b.WriteString(input.Radio.View(m.focusIndex == i))
 			} else {
 				b.WriteString(input.Freeform.View())
 			}
@@ -510,14 +522,14 @@ func (m *installModel) getInput(i int) *inputEntry {
 func (m *installModel) convertValues() {
 	for k, val := range m.inputs {
 		if val.Required {
-			if val.Selector != nil &&
-				len(val.Selector.Value()) == 0 {
+			if val.Radio != nil &&
+				len(val.Radio.Value()) == 0 {
 				val.Error = "required"
 				m.hasErrors = true
 				continue
 			}
 
-			if val.Selector == nil &&
+			if val.Radio == nil &&
 				len(val.Freeform.Value()) == 0 {
 				val.Error = "required"
 				m.hasErrors = true
@@ -538,7 +550,7 @@ func (m *installModel) convertValues() {
 			debug.Output("convert tower version is %s", version)
 
 		case keyPlatform:
-			displayName := val.Selector.Value()
+			displayName := val.Radio.Value()
 			platform, ok := constants.DisplayToPlatform[displayName]
 			if !ok {
 				val.Error = "invalid platform"
@@ -549,7 +561,7 @@ func (m *installModel) convertValues() {
 
 		case keyPermissions:
 			platformInput := m.inputs[keyPlatform]
-			platform, ok := constants.DisplayToPlatform[platformInput.Selector.Value()]
+			platform, ok := constants.DisplayToPlatform[platformInput.Radio.Value()]
 			if !ok {
 				break
 			}
@@ -560,10 +572,10 @@ func (m *installModel) convertValues() {
 				break
 			}
 
-			permission := val.Selector.Value()
+			permission := val.Radio.Value()
 			permSettings, ok := perms[permission]
 			if !ok {
-				val.Error = fmt.Sprintf("%s permissions are not supported for platform '%s'", permission, platformInput.Selector.Value())
+				val.Error = fmt.Sprintf("%s permissions are not supported for platform '%s'", permission, platformInput.Radio.Value())
 				break
 			}
 
@@ -610,8 +622,8 @@ func (m *installModel) resetConverted() {
 func (m *installModel) nextEmptyInput() {
 	for ; m.focusIndex < len(m.inputs); m.focusIndex++ {
 		input := m.getInput(m.focusIndex)
-		if input.Selector != nil {
-			if len(input.Selector.Value()) == 0 {
+		if input.Radio != nil {
+			if len(input.Radio.Value()) == 0 {
 				break
 			}
 		} else if len(input.Freeform.Value()) == 0 {
