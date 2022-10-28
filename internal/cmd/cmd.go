@@ -15,14 +15,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	tokenFlag, versionFlag, vmFlag, projectFlag, zoneFlag, platformFlag *string
+	writeFlag                                                           *bool
+)
+
 func init() {
-	installCmd.Flags().StringP("token", "t", "", "The Flightcrew API token to identify your organization.")
-	installCmd.Flags().StringP("image_version", "v", "stable", "The Flightcrew image version to install.")
-	installCmd.Flags().StringP("vm", "", "flightcrew-control-tower", "The name of the VM that will be created for the Flightcrew tower in your project.")
-	installCmd.Flags().BoolP("readonly", "r", true, "Whether the Flightcrew tower should be readonly (true) or read-write (false).")
-	installCmd.Flags().StringP("project", "p", "", "specify your Google Cloud Platform project name")
-	installCmd.Flags().StringP("zone", "l", "us-central", "The zone to put your Tower in.")
-	installCmd.Flags().StringP("platform", "c", "gae_std", "specify what type of resources you want to manage. (gae_std, gce)")
+	tokenFlag = installCmd.Flags().StringP("token", "t", "", "The Flightcrew API token to identify your organization.")
+	versionFlag = installCmd.Flags().StringP("version", "v", "stable", "The Flightcrew image version to install.")
+	vmFlag = installCmd.Flags().StringP("vm", "", "flightcrew-control-tower", "The name of the VM that will be created for the Flightcrew tower in your project.")
+	writeFlag = installCmd.Flags().BoolP("write", "w", false, "Whether the Flightcrew tower should be readonly (true) or read-write (false).")
+	projectFlag = installCmd.Flags().StringP("project", "p", "", "specify your Google Cloud Platform project name")
+	zoneFlag = installCmd.Flags().StringP("zone", "l", "us-central", "The zone to put your Tower in.")
+	platformFlag = installCmd.Flags().StringP("platform", "c", "gae_std", "specify what type of resources you want to manage. (gae_std, gce)")
 }
 
 // Do runs the command logic.
@@ -104,37 +109,29 @@ var installCmd = &cobra.Command{
 
 		params := view.InstallParams{}
 
-		if project := cmd.Flag("project").Value.String(); project != "" {
-			params.ProjectName = project
-		} else if project, err := gcp.GetCurrentProject(ctx); err == nil {
-			fmt.Println("project retrieved from context")
-			params.ProjectName = project
-		}
-
-		if zone := cmd.Flag("zone").Value.String(); zone != "" {
-			params.Zone = zone
-		}
-
-		if version := cmd.Flag("image_version").Value.String(); version != "" {
-			params.TowerVersion = version
-		}
-
-		if token := cmd.Flag("token").Value.String(); token != "" {
-			params.Token = token
-		}
-
-		if platformKey := cmd.Flag("platform").Value.String(); platformKey != "" {
-			displayName, ok := constants.KeyToDisplay[platformKey]
-			if !ok {
-				desired := make([]string, 0, len(constants.KeyToDisplay))
-				for k := range constants.KeyToDisplay {
-					desired = append(desired, k)
-				}
-				return fmt.Errorf("invalid --platform flag: %s", strings.Join(desired, ", "))
+		params.ProjectName = *projectFlag
+		if len(params.ProjectName) == 0 {
+			if project, err := gcp.GetCurrentProject(ctx); err == nil {
+				fmt.Println("project retrieved from context")
+				params.ProjectName = project
 			}
-
-			params.PlatformDisplayName = displayName
 		}
+		params.Zone = *zoneFlag
+		params.TowerVersion = *versionFlag
+		params.Token = *tokenFlag
+		params.ReadOnly = !*writeFlag
+		params.VirtualMachineName = *vmFlag
+
+		displayName, ok := constants.KeyToDisplay[*platformFlag]
+		if !ok {
+			desired := make([]string, 0, len(constants.KeyToDisplay))
+			for k := range constants.KeyToDisplay {
+				desired = append(desired, k)
+			}
+			return fmt.Errorf("invalid --platform flag: %s", strings.Join(desired, ", "))
+		}
+
+		params.PlatformDisplayName = displayName
 
 		dir, err := os.MkdirTemp("", "flightcrew-install-*")
 		if err != nil {

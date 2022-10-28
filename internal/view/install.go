@@ -544,7 +544,7 @@ func (m *installModel) convertValues() {
 				break
 			}
 
-			f, err := os.CreateTemp(m.tempDir, filenameReplacer.Replace(fmt.Sprintf("%s_%s", platform, permission)))
+			f, err := os.CreateTemp(m.tempDir, filenameReplacer.Replace(fmt.Sprintf("%s_%s", permission, platform)))
 			if err != nil {
 				val.Error = "create temp file to put permissions YAML"
 				break

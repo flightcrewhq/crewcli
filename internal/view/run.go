@@ -3,18 +3,12 @@ package view
 import (
 	"os/exec"
 	"strings"
-	"time"
 
 	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/style"
 	"github.com/charmbracelet/bubbles/paginator"
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-)
-
-var (
-	spinnerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
 )
 
 type cmdFinishedErr struct {
@@ -32,17 +26,11 @@ type runModel struct {
 	yesButton *Button
 	noButton  *Button
 
-	spinner spinner.Model
-
 	quitting bool
 }
 
 func NewRunModel(params map[string]string) *runModel {
 	debug.Output("New run model time!")
-	spin := spinner.New()
-	spin.Style = spinnerStyle
-	spin.Spinner = spinner.Line
-	spin.Spinner.FPS = time.Second / 5
 
 	yesButton, err := NewButton("yes", 10)
 	_ = err
@@ -60,7 +48,7 @@ func NewRunModel(params map[string]string) *runModel {
 	checkIAMRole := &CommandState{
 		Command: `gcloud iam roles describe --project="${GOOGLE_PROJECT_ID}" "${IAM_ROLE}" >/dev/null 2>&1`,
 		Read: &ReadCommandState{
-			SuccessMessage: "Found the Flightcrew role!",
+			SuccessMessage: "This Flightcrew IAM role already exists.",
 			FailureMessage: "No IAM role found. Next step is to create one.",
 		},
 		Description: "Check if a Flightcrew IAM Role already exists or needs to be created.",
@@ -68,15 +56,14 @@ func NewRunModel(params map[string]string) *runModel {
 	checkVMExists := &CommandState{
 		Command: `gcloud compute instances list --format="csv(NAME,EXTERNAL_IP,STATUS)" --project=${GOOGLE_PROJECT_ID} --zones=${ZONE} | awk -F "," "/${VIRTUAL_MACHINE}/ {print f(2), f(3)} function f(n){return (\$n==\"\" ? \"null\" : \$n)}"`,
 		Read: &ReadCommandState{
-			SuccessMessage: "Flightcrew VM already exists! Aborting installation.",
-			FailureMessage: "No existing VM found. Continuing to installation.",
+			SuccessMessage: "This Flightcrew VM already exists. Nothing to install.",
+			FailureMessage: "No existing VM found. Next step is to create it.",
 		},
 		Description: "Check if a Flightcrew VM already exists or needs to be created.",
 	}
 
 	m := &runModel{
-		params:  params,
-		spinner: spin,
+		params: params,
 		commands: []*CommandState{
 			checkServiceAccount,
 			{
@@ -84,7 +71,7 @@ func NewRunModel(params map[string]string) *runModel {
 	--project="${GOOGLE_PROJECT_ID}" \
 	--display-name="${SERVICE_ACCOUNT}" \
 	--description="Runs Flightcrew's Control Tower VM."`,
-				Description: `This command will create a service account, and follow-up commands will attach read and/or write permissions.`,
+				Description: `This command will create a service account, and follow-up commands will attach ${PERMISSIONS} permissions.`,
 				Mutate: &MutateCommandState{
 					SkipIfSucceed: checkServiceAccount,
 					Link:          "https://cloud.google.com/iam/docs/creating-managing-service-accounts",
@@ -170,7 +157,7 @@ func NewRunModel(params map[string]string) *runModel {
 }
 
 func (m *runModel) Init() tea.Cmd {
-	return m.spinner.Tick
+	return nil
 }
 
 func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -194,11 +181,6 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, cmd
 			}
 		}
-
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
 	}
 
 	command := m.commands[m.currentIndex]
@@ -252,7 +234,7 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// TODO if we're at the end --> go to another screen
 
 		}
-		return m, m.spinner.Tick
+		return m, nil
 
 	case PassState:
 		switch msg.(type) {
@@ -266,7 +248,7 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			return m, m.spinner.Tick
+			return m, nil
 		}
 
 	case FailState:
@@ -276,7 +258,7 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	return m, m.spinner.Tick
+	return m, nil
 }
 
 func (m *runModel) View() string {
@@ -290,7 +272,7 @@ func (m *runModel) View() string {
 	b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render(m.paginator.View()))
 	b.WriteRune('\n')
 
-	b.WriteString(command.View(m.spinner))
+	b.WriteString(command.View())
 	b.WriteString("\n\n")
 
 	if command.State == PromptState {

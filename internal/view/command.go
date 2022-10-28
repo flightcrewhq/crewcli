@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"flightcrew.io/cli/internal/style"
-	"github.com/charmbracelet/bubbles/spinner"
 )
 
 type commandState string
@@ -60,7 +59,7 @@ type MutateCommandState struct {
 	Link          string
 }
 
-func (s *CommandState) View(spinner spinner.Model) string {
+func (s *CommandState) View() string {
 	var descB strings.Builder
 
 	descB.WriteString(s.Description)
@@ -85,34 +84,34 @@ func (s *CommandState) View(spinner spinner.Model) string {
 	case NoneState:
 
 	case SkipState:
-		outB.WriteRune('⏭')
-		outB.WriteRune(' ')
+		outB.WriteString("⏭ ")
 		outB.WriteString(style.Bold("[SKIPPED] "))
 		outB.WriteString(s.Mutate.SkipIfSucceed.Read.SuccessMessage)
 
 	case RunningState:
-		outB.WriteString("Running... ")
-		outB.WriteString(spinner.View())
-		outB.WriteRune('\n')
+		outB.WriteString("🚧 ")
+		outB.WriteString("Running...\n")
 
 	case PassState:
-		outB.WriteString(style.Success("[SUCCESS]"))
+		outB.WriteString("✅ ")
+		outB.WriteString(style.Success("[SUCCESS] "))
 		if s.Read != nil && len(s.Read.SuccessMessage) > 0 {
-			outB.WriteRune(' ')
 			outB.WriteString(s.Read.SuccessMessage)
 			outB.WriteRune('\n')
 		} else {
-			outB.WriteString(" Command completed.\n")
+			outB.WriteString("Command completed.\n")
 		}
 
 	case FailState:
-		outB.WriteString(style.Error("[ERROR]"))
-		outB.WriteString(" Command failed.\n\n")
-
 		if s.Read != nil &&
 			len(s.Read.FailureMessage) > 0 {
+			outB.WriteString("Command returned error: ")
 			outB.WriteString(s.Read.FailureMessage)
 			outB.WriteRune('\n')
+		} else {
+			outB.WriteString("⛔️ ")
+			outB.WriteString(style.Error("[ERROR] "))
+			outB.WriteString("Command failed.\n\n")
 		}
 	}
 
