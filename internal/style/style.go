@@ -35,6 +35,10 @@ var (
 		Light: "#FFFFFF",
 		Dark:  "#FFFFFF",
 	}).Render
+	Convert = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
+		Light: "188",
+		Dark:  "250",
+	}).Render
 
 	Glamour *glamour.TermRenderer
 )

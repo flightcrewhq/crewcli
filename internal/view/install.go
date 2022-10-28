@@ -1,8 +1,10 @@
 package view
 
 import (
+	"fmt"
 	"strings"
 
+	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/style"
@@ -46,6 +48,7 @@ type installModel struct {
 	inputs     map[string]*inputEntry
 	inputKeys  []string
 	focusIndex int
+	hasErrors  bool
 
 	titleStyle lipgloss.Style
 
@@ -93,13 +96,12 @@ func NewInstallModel(params InstallParams) installModel {
 			keyProject,
 			keyVirtualMachine,
 			keyAPIToken,
+			keyPlatform,
+			keyPermissions,
 			keyZone,
 			keyTowerVersion,
 			keyIAMServiceAccount,
 			keyIAMRole,
-			keyIAMFile,
-			keyPlatform,
-			keyPermissions,
 		},
 		logStatements: make([]string, 0),
 	}
@@ -182,12 +184,6 @@ func NewInstallModel(params InstallParams) installModel {
 			input.Freeform.SetValue("flightcrew.gae.read.only")
 			input.HelpText = "IAM Role is the name of the (to be created) IAM role defining permissions to run the Flightcrew Tower."
 
-		case keyIAMFile:
-			input.Title = "IAM File"
-			input.Default = "flightcrew.gae.read.only"
-			input.Freeform.SetValue("gcp/gae/iam_readonly.yaml")
-			input.HelpText = "IAM File provides the list of permissions to attach to the (to be created) IAM Role."
-
 		case keyPlatform:
 			input.Title = "Platform"
 			input.HelpText = "Platform is which Google Cloud Provider resources Flightcrew will read in."
@@ -199,11 +195,11 @@ func NewInstallModel(params InstallParams) installModel {
 		case keyPermissions:
 			input.Title = "Permissions"
 			input.HelpText = "Permissions is whether Flightcrew will only read in your resources, or if Flightcrew can modify (if you ask us to) your resources."
-			input.Selector = NewHorizontalSelector([]string{"Read", "Write"})
+			input.Selector = NewHorizontalSelector([]string{constants.Read, constants.Write})
 			if params.ReadOnly {
-				input.Selector.SetValue("Read")
+				input.Selector.SetValue(constants.Read)
 			} else {
-				input.Selector.SetValue("Write")
+				input.Selector.SetValue(constants.Write)
 			}
 
 		}
@@ -216,7 +212,7 @@ func NewInstallModel(params InstallParams) installModel {
 	}
 
 	// Format help text.
-	wrappedText, _ := style.Glamour.Render("> Edit a particular entry to see help text here\n> Otherwise, press enter to proceed.")
+	wrappedText, _ := style.Glamour.Render("> Edit a particular entry to see help text here.\n> Otherwise, press enter to proceed.")
 	m.defaultHelpText = strings.Trim(wrappedText, "\n")
 	defaultLines := strings.Count(m.defaultHelpText, "\n")
 	maxLines := defaultLines
@@ -240,6 +236,7 @@ func NewInstallModel(params InstallParams) installModel {
 	}
 
 	m.titleStyle = lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength)
+	m.nextEmptyInput()
 	m.updateFocus()
 
 	return m
@@ -269,6 +266,9 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if !m.confirming {
 						m.confirming = true
 						m.convertValues()
+						if m.hasErrors {
+							m.focusIndex = len(m.inputs) + 1
+						}
 						return m, nil
 					}
 
@@ -288,22 +288,14 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				if m.focusIndex == len(m.inputs)+1 {
 					m.confirming = false
+					m.hasErrors = false
 					m.focusIndex = len(m.inputs)
 					m.resetConverted()
 					return m, nil
 				}
 
 				m.focusIndex++
-				for ; m.focusIndex < len(m.inputs); m.focusIndex++ {
-					input := m.getInput(m.focusIndex)
-					if input.Selector != nil {
-						if len(input.Selector.Value()) == 0 {
-							break
-						}
-					} else if len(input.Freeform.Value()) == 0 {
-						break
-					}
-				}
+				m.nextEmptyInput()
 
 			case "up", "shift+tab":
 				if !m.confirming {
@@ -328,8 +320,10 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case "left":
 				if m.confirming {
-					m.focusIndex--
-				} else {
+					if !m.hasErrors {
+						m.focusIndex--
+					}
+				} else if m.focusIndex < len(m.inputs) {
 					input := m.getInput(m.focusIndex)
 					if input.Selector != nil {
 						input.Selector.MoveLeft()
@@ -432,12 +426,12 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 			}
 			if len(input.Converted) > 0 {
 				b.WriteString(" → ")
-				b.WriteString(input.Converted)
+				b.WriteString(style.Convert(input.Converted))
 			}
 
 			if len(input.Error) > 0 {
 				b.WriteString(" ❗️ ")
-				b.WriteString(input.Error)
+				b.WriteString(style.Error(input.Error))
 			}
 		} else {
 			if input.Selector != nil {
@@ -461,8 +455,10 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	b.WriteString("\n\n")
 
 	if m.confirming {
-		b.WriteString(m.confirmYesButton.View(m.focusIndex == len(m.inputs)))
-		b.WriteRune(' ')
+		if !m.hasErrors {
+			b.WriteString(m.confirmYesButton.View(m.focusIndex == len(m.inputs)))
+			b.WriteRune(' ')
+		}
 		b.WriteString(m.confirmNoButton.View(m.focusIndex == len(m.inputs)+1))
 	} else {
 		b.WriteString(m.submitButton.View(m.focusIndex == len(m.inputs)))
@@ -503,6 +499,39 @@ func (m *installModel) convertValues() {
 
 			val.Converted = version
 			debug.Output("convert tower version is %s", version)
+
+		case keyPlatform:
+			displayName := val.Selector.Value()
+			platform, ok := constants.DisplayToPlatform[displayName]
+			if !ok {
+				val.Error = "invalid platform"
+				continue
+			}
+
+			val.Converted = platform
+
+		case keyPermissions:
+			platformInput := m.inputs[keyPlatform]
+			platform, ok := constants.DisplayToPlatform[platformInput.Selector.Value()]
+			if !ok {
+				continue
+			}
+
+			perms, ok := constants.PlatformPermissions[platform]
+			if !ok {
+				val.Error = "platform has no permissions"
+				continue
+			}
+
+			_, ok = perms[val.Selector.Value()]
+			if !ok {
+				val.Error = fmt.Sprintf("%s permissions are not supported for platform '%s'", val.Selector.Value(), platformInput.Selector.Value())
+
+			}
+		}
+
+		if len(val.Error) > 0 {
+			m.hasErrors = true
 		}
 	}
 }
@@ -511,5 +540,18 @@ func (m *installModel) resetConverted() {
 	for _, val := range m.inputs {
 		val.Converted = ""
 		val.Error = ""
+	}
+}
+
+func (m *installModel) nextEmptyInput() {
+	for ; m.focusIndex < len(m.inputs); m.focusIndex++ {
+		input := m.getInput(m.focusIndex)
+		if input.Selector != nil {
+			if len(input.Selector.Value()) == 0 {
+				break
+			}
+		} else if len(input.Freeform.Value()) == 0 {
+			break
+		}
 	}
 }
