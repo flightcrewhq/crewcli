@@ -36,13 +36,22 @@ func (s *HorizontalSelector) MoveRight() {
 	}
 }
 
-func (s *HorizontalSelector) View() string {
+func (s *HorizontalSelector) View(focused bool) string {
 	var b strings.Builder
+	if focused {
+		b.WriteString(style.Focused.Render("> "))
+	} else {
+		b.WriteString("> ")
+	}
 
 	numOpts := len(s.options)
 	for i, opt := range s.options {
 		if i == s.currentIndex {
-			b.WriteString(style.Highlight(opt))
+			if focused {
+				b.WriteString(style.Highlight(opt))
+			} else {
+				b.WriteString(style.BlurHighlight(opt))
+			}
 		} else {
 			b.WriteString(style.Blurred.Render(opt))
 		}

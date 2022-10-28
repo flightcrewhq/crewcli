@@ -1,7 +1,6 @@
 package view
 
 import (
-	"fmt"
 	"os/exec"
 	"strings"
 	"time"
@@ -36,13 +35,10 @@ type runModel struct {
 	spinner spinner.Model
 
 	quitting bool
-
-	logStatements []string
 }
 
 func NewRunModel(params map[string]string) *runModel {
 	debug.Output("New run model time!")
-	const defaultWidth = 20
 	spin := spinner.New()
 	spin.Style = spinnerStyle
 	spin.Spinner = spinner.Line
@@ -322,11 +318,6 @@ func (m *runModel) View() string {
 	}
 
 	b.WriteRune('\n')
-	for _, str := range m.logStatements {
-		b.WriteString(str)
-		b.WriteRune('\n')
-	}
-
 	return b.String()
 }
 
@@ -335,7 +326,6 @@ func (m *runModel) nextCommand() bool {
 		m.paginator.Page = m.currentIndex
 		current := m.commands[m.currentIndex]
 		if current.State != NoneState {
-			m.logStatements = append(m.logStatements, fmt.Sprintf("command %d is not in state none: %s", m.currentIndex, current.State))
 			continue
 		}
 
@@ -358,13 +348,11 @@ func (m *runModel) nextCommand() bool {
 		prereq := current.Mutate.SkipIfSucceed
 		if prereq == nil || prereq.State == FailState {
 			current.State = PromptState
-			m.logStatements = append(m.logStatements, fmt.Sprintf("Returning true for command %d: failed or no prereq", m.currentIndex))
 			return true
 		}
 
 		if prereq.State == PassState {
 			current.State = SkipState
-			m.logStatements = append(m.logStatements, fmt.Sprintf("command %d's prereq is in state passed", m.currentIndex))
 			continue
 		}
 
@@ -373,11 +361,9 @@ func (m *runModel) nextCommand() bool {
 			if err := c.Run(); err != nil {
 				prereq.State = FailState
 				current.State = PromptState
-				m.logStatements = append(m.logStatements, fmt.Sprintf("Returning true for command %d: just failed prereq", m.currentIndex))
 				return true
 			}
 
-			m.logStatements = append(m.logStatements, fmt.Sprintf("Readonly command %d just passed", m.currentIndex))
 			prereq.State = PassState
 		}
 	}

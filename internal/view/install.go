@@ -205,7 +205,7 @@ func NewInstallModel(params InstallParams) installModel {
 	}
 
 	// Format help text.
-	wrappedText, _ := style.Glamour.Render("> Edit a particular entry to see help text here.")
+	wrappedText, _ := style.Glamour.Render("> Edit a particular entry to see help text here\n> Otherwise, press enter to proceed.")
 	m.defaultHelpText = strings.Trim(wrappedText, "\n")
 	defaultLines := strings.Count(m.defaultHelpText, "\n")
 	maxLines := defaultLines
@@ -229,6 +229,7 @@ func NewInstallModel(params InstallParams) installModel {
 	}
 
 	m.titleStyle = lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength)
+	m.updateFocus()
 
 	return m
 }
@@ -429,8 +430,7 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 			}
 		} else {
 			if input.Selector != nil {
-				b.WriteString("> ")
-				b.WriteString(input.Selector.View())
+				b.WriteString(input.Selector.View(m.focusIndex == i))
 			} else {
 				b.WriteString(input.Freeform.View())
 			}

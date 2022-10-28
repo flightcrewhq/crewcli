@@ -28,6 +28,13 @@ var (
 		Light: "#FFFFFF",
 		Dark:  "#FFFFFF",
 	}).Render
+	BlurHighlight = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{
+		Light: "219",
+		Dark:  "219",
+	}).Foreground(lipgloss.AdaptiveColor{
+		Light: "#FFFFFF",
+		Dark:  "#FFFFFF",
+	}).Render
 
 	Glamour *glamour.TermRenderer
 )
