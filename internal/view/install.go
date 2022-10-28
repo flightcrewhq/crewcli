@@ -21,17 +21,20 @@ const (
 	keyIAMRole           = "${IAM_ROLE}"
 	keyIAMServiceAccount = "${SERVICE_ACCOUNT}"
 	keyIAMFile           = "${IAM_FILE}"
+	keyPermissions       = "${PERMISSIONS}"
+	keyPlatform          = "${PLATFORM}"
 )
 
-type wrappedInput struct {
+type inputEntry struct {
 	Title    string
 	HelpText string
 	Required bool
 	Default  string
-	Input    textinput.Model
 	// If the value is to be converted, this is only valid when model.confirming is true.
 	Converted string
 	Error     string
+	Freeform  textinput.Model
+	Selector  *HorizontalSelector
 }
 
 type installModel struct {
@@ -40,7 +43,7 @@ type installModel struct {
 	width  int
 	height int
 
-	inputs     map[string]*wrappedInput
+	inputs     map[string]*inputEntry
 	inputKeys  []string
 	focusIndex int
 
@@ -83,7 +86,7 @@ func NewInstallModel(params InstallParams) installModel {
 
 	m := installModel{
 		params: params,
-		inputs: make(map[string]*wrappedInput),
+		inputs: make(map[string]*inputEntry),
 		inputKeys: []string{
 			keyProject,
 			keyVirtualMachine,
@@ -93,6 +96,8 @@ func NewInstallModel(params InstallParams) installModel {
 			keyIAMServiceAccount,
 			keyIAMRole,
 			keyIAMFile,
+			keyPlatform,
+			keyPermissions,
 		},
 		logStatements: make([]string, 0),
 	}
@@ -104,33 +109,33 @@ func NewInstallModel(params InstallParams) installModel {
 	var maxTitleLength int
 
 	for _, key := range m.inputKeys {
-		input := &wrappedInput{
-			Input: textinput.New(),
+		input := &inputEntry{
+			Freeform: textinput.New(),
 		}
-		input.Input.CursorStyle = cursorStyle
-		input.Input.CharLimit = 32
+		input.Freeform.CursorStyle = cursorStyle
+		input.Freeform.CharLimit = 32
 
 		switch key {
 		case keyProject:
 			if len(params.ProjectName) > 0 {
-				input.Input.SetValue(params.ProjectName)
+				input.Freeform.SetValue(params.ProjectName)
 				input.Default = params.ProjectName
 			} else {
-				input.Input.Placeholder = "project-id-1234"
+				input.Freeform.Placeholder = "project-id-1234"
 			}
-			input.Input.Focus()
-			input.Input.PromptStyle = style.Focused
-			input.Input.TextStyle = style.Focused
+			input.Freeform.Focus()
+			input.Freeform.PromptStyle = style.Focused
+			input.Freeform.TextStyle = style.Focused
 			input.Title = "Project ID"
 			input.HelpText = "Project ID is the unique string identifier for your Google Cloud Platform project."
 			input.Required = true
 
 		case keyVirtualMachine:
 			if params.VirtualMachineName != "" {
-				input.Input.SetValue(params.VirtualMachineName)
+				input.Freeform.SetValue(params.VirtualMachineName)
 			}
-			input.Input.Placeholder = "flightcrew-control-tower"
-			input.Input.CharLimit = 64
+			input.Freeform.Placeholder = "flightcrew-control-tower"
+			input.Freeform.CharLimit = 64
 			input.Title = "VM Name"
 			input.Default = "flightcrew-control-tower"
 			input.Required = true
@@ -138,27 +143,27 @@ func NewInstallModel(params InstallParams) installModel {
 
 		case keyZone:
 			if params.Zone != "" {
-				input.Input.SetValue(params.Zone)
+				input.Freeform.SetValue(params.Zone)
 			}
-			input.Input.Placeholder = "us-central"
-			input.Input.CharLimit = 32
+			input.Freeform.Placeholder = "us-central"
+			input.Freeform.CharLimit = 32
 			input.Title = "Zone"
 			input.Default = "us-central"
 			input.HelpText = "Zone is the Google zone where the (to be installed) Flightcrew virtual machine instance will be located."
 
 		case keyTowerVersion:
 			if params.TowerVersion != "" {
-				input.Input.SetValue(params.TowerVersion)
+				input.Freeform.SetValue(params.TowerVersion)
 			}
-			input.Input.Placeholder = "stable"
+			input.Freeform.Placeholder = "stable"
 			input.Title = "Tower Version"
 			input.HelpText = "Tower Version is the version of the Tower image that will be installed. (recommended: `stable`)"
 
 		case keyAPIToken:
 			if len(params.Token) > 0 {
-				input.Input.SetValue(params.Token)
+				input.Freeform.SetValue(params.Token)
 			}
-			input.Input.Placeholder = "api-token"
+			input.Freeform.Placeholder = "api-token"
 			input.Title = "API Token"
 			input.Required = true
 			input.HelpText = "API token is the value provided by Flightcrew to identify your organization."
@@ -166,21 +171,30 @@ func NewInstallModel(params InstallParams) installModel {
 		case keyIAMServiceAccount:
 			input.Title = "IAM Service Account"
 			input.Default = "flightcrew-runner-test-chris"
-			input.Input.SetValue("flightcrew-runner-test-chris")
+			input.Freeform.SetValue("flightcrew-runner-test-chris")
 			input.HelpText = "IAM Service Account is the name of the (to be created) service account to run the Flightcrew Tower."
 
 		case keyIAMRole:
 			input.Title = "IAM Role"
 			input.Default = "flightcrew.gae.read.only"
-			input.Input.SetValue("flightcrew.gae.read.only")
+			input.Freeform.SetValue("flightcrew.gae.read.only")
 			input.HelpText = "IAM Role is the name of the (to be created) IAM role defining permissions to run the Flightcrew Tower."
 
 		case keyIAMFile:
 			input.Title = "IAM File"
 			input.Default = "flightcrew.gae.read.only"
-			input.Input.SetValue("gcp/gae/iam_readonly.yaml")
+			input.Freeform.SetValue("gcp/gae/iam_readonly.yaml")
 			input.HelpText = "IAM File provides the list of permissions to attach to the (to be created) IAM Role."
 
+		case keyPlatform:
+			input.Title = "Platform"
+			input.HelpText = "Platform is which Google Cloud Provider resources Flightcrew will read in."
+			input.Selector = NewHorizontalSelector([]string{"App Engine", "Compute Engine"})
+
+		case keyPermissions:
+			input.Title = "Permissions"
+			input.HelpText = "Permissions is whether Flightcrew will only read in your resources, or if Flightcrew can modify (if you ask us to) your resources."
+			input.Selector = NewHorizontalSelector([]string{"Read", "Write"})
 		}
 
 		m.inputs[key] = input
@@ -249,8 +263,10 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				for key, wInput := range m.inputs {
 					if len(wInput.Converted) > 0 {
 						args[key] = wInput.Converted
+					} else if wInput.Selector != nil {
+						args[key] = wInput.Selector.Value()
 					} else {
-						args[key] = wInput.Input.Value()
+						args[key] = wInput.Freeform.Value()
 					}
 				}
 
@@ -269,7 +285,12 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else if s == "enter" {
 					m.focusIndex++
 					for ; m.focusIndex < len(m.inputs); m.focusIndex++ {
-						if len(m.inputs[m.inputKeys[m.focusIndex]].Input.Value()) == 0 {
+						input := m.getInput(m.focusIndex)
+						if input.Selector != nil {
+							if len(input.Selector.Value()) == 0 {
+								break
+							}
+						} else if len(input.Freeform.Value()) == 0 {
 							break
 						}
 					}
@@ -300,30 +321,31 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 
-			cmds := make([]tea.Cmd, len(m.inputs))
-			for i := 0; i < len(m.inputs); i++ {
-				input := m.getInput(i)
-				if i == m.focusIndex {
-					// Set focused state
-					cmds[i] = input.Input.Focus()
-					input.Input.PromptStyle = style.Focused
-					input.Input.TextStyle = style.Focused
-					continue
-				}
-				// Remove focused state
-				input.Input.Blur()
-				input.Input.PromptStyle = style.None
-				input.Input.TextStyle = style.None
-			}
-
-			return m, tea.Batch(cmds...)
+			return m, m.updateFocus()
 		}
 	}
 
 	// Handle character input and blinking
-	cmd := m.updateInputs(msg)
+	return m, m.updateInputs(msg)
+}
 
-	return m, cmd
+func (m *installModel) updateFocus() tea.Cmd {
+	cmds := make([]tea.Cmd, len(m.inputs))
+	for i := 0; i < len(m.inputs); i++ {
+		input := m.getInput(i)
+		if i == m.focusIndex {
+			// Set focused state
+			cmds[i] = input.Freeform.Focus()
+			input.Freeform.PromptStyle = style.Focused
+			input.Freeform.TextStyle = style.Focused
+			continue
+		}
+		// Remove focused state
+		input.Freeform.Blur()
+		input.Freeform.PromptStyle = style.None
+		input.Freeform.TextStyle = style.None
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m *installModel) updateInputs(msg tea.Msg) tea.Cmd {
@@ -333,7 +355,9 @@ func (m *installModel) updateInputs(msg tea.Msg) tea.Cmd {
 	// Only text inputs with Focus() set will respond, so it's safe to simply
 	// update all of them here without any further logic.
 	for k, val := range m.inputs {
-		m.inputs[k].Input, cmds[i] = val.Input.Update(msg)
+		if m.inputs[k].Selector != nil {
+			m.inputs[k].Freeform, cmds[i] = val.Freeform.Update(msg)
+		}
 		i++
 	}
 
@@ -359,7 +383,11 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 		b.WriteString(": ")
 
 		if m.confirming {
-			b.WriteString(input.Input.Value())
+			if input.Selector != nil {
+				b.WriteString(input.Selector.Value())
+			} else {
+				b.WriteString(input.Freeform.Value())
+			}
 			if len(input.Converted) > 0 {
 				b.WriteString(" → ")
 				b.WriteString(input.Converted)
@@ -370,14 +398,19 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 				b.WriteString(input.Error)
 			}
 		} else {
-			b.WriteString(input.Input.View())
+			if input.Selector != nil {
+				b.WriteString("> ")
+				b.WriteString(input.Selector.View())
+			} else {
+				b.WriteString(input.Freeform.View())
+			}
 		}
 
 		b.WriteRune('\n')
 	}
 
 	if m.focusIndex < len(m.inputKeys) {
-		b.WriteString(m.inputs[m.inputKeys[m.focusIndex]].HelpText)
+		b.WriteString(m.getInput(m.focusIndex).HelpText)
 		b.WriteRune('\n')
 	} else if !m.confirming {
 		b.WriteString(m.defaultHelpText)
@@ -411,7 +444,7 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	return wordwrap.String(b.String(), m.width)
 }
 
-func (m *installModel) getInput(i int) *wrappedInput {
+func (m *installModel) getInput(i int) *inputEntry {
 	k := m.inputKeys[i]
 	return m.inputs[k]
 }
@@ -420,7 +453,7 @@ func (m *installModel) convertValues() {
 	for k, val := range m.inputs {
 		switch k {
 		case keyTowerVersion:
-			version, err := gcp.GetTowerImageVersion(val.Input.Value())
+			version, err := gcp.GetTowerImageVersion(val.Freeform.Value())
 			if err != nil {
 				val.Error = err.Error()
 				debug.Output("convert tower version got error: %v", err)
