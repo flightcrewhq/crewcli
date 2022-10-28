@@ -1,4 +1,4 @@
-package view
+package button
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ type Button struct {
 	text string
 }
 
-func NewButton(text string, width int) (*Button, error) {
+func New(text string, width int) (*Button, error) {
 	numPadding := width - len(text)
 	if numPadding < 0 {
 		return nil, fmt.Errorf("text length is less than width: %d vs %d", len(text), width)

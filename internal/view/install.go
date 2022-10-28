@@ -9,6 +9,7 @@ import (
 	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/style"
+	"flightcrew.io/cli/internal/view/button"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -65,9 +66,9 @@ type installModel struct {
 	titleStyle lipgloss.Style
 
 	confirming       bool
-	submitButton     *Button
-	confirmYesButton *Button
-	confirmNoButton  *Button
+	submitButton     *button.Button
+	confirmYesButton *button.Button
+	confirmNoButton  *button.Button
 
 	defaultHelpText string
 	tempDir         string
@@ -119,9 +120,9 @@ func NewInstallModel(params InstallParams, tempDir string) installModel {
 		logStatements: make([]string, 0),
 	}
 
-	m.submitButton, _ = NewButton("Submit", 12)
-	m.confirmYesButton, _ = NewButton("Continue", 12)
-	m.confirmNoButton, _ = NewButton("Edit", 12)
+	m.submitButton, _ = button.New("Submit", 12)
+	m.confirmYesButton, _ = button.New("Continue", 12)
+	m.confirmNoButton, _ = button.New("Edit", 12)
 
 	m.tempDir = tempDir
 	m.args = make(map[string]string)

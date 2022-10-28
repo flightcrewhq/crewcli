@@ -6,6 +6,7 @@ import (
 
 	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/style"
+	"flightcrew.io/cli/internal/view/button"
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -23,8 +24,8 @@ type runModel struct {
 	currentIndex int
 
 	userInput bool
-	yesButton *Button
-	noButton  *Button
+	yesButton *button.Button
+	noButton  *button.Button
 
 	quitting bool
 }
@@ -32,10 +33,8 @@ type runModel struct {
 func NewRunModel(params map[string]string) *runModel {
 	debug.Output("New run model time!")
 
-	yesButton, err := NewButton("yes", 10)
-	_ = err
-	noButton, err := NewButton("no", 10)
-	_ = err
+	yesButton, _ := button.New("yes", 10)
+	noButton, _ := button.New("no", 10)
 
 	checkServiceAccount := &CommandState{
 		Read: &ReadCommandState{
