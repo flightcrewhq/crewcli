@@ -16,18 +16,20 @@ import (
 )
 
 var (
+	// Declare the variables and then assign them in init() so that we don't have a cyclical dependency
+	// since the installCmd references these variables, but we need to first instantiate the flags.
 	tokenFlag, versionFlag, vmFlag, projectFlag, zoneFlag, platformFlag *string
 	writeFlag                                                           *bool
 )
 
 func init() {
-	tokenFlag = installCmd.Flags().StringP("token", "t", "", "The Flightcrew API token to identify your organization.")
-	versionFlag = installCmd.Flags().StringP("version", "v", "stable", "The Flightcrew image version to install.")
-	vmFlag = installCmd.Flags().StringP("vm", "", "flightcrew-control-tower", "The name of the VM that will be created for the Flightcrew tower in your project.")
-	writeFlag = installCmd.Flags().BoolP("write", "w", false, "Whether the Flightcrew tower should be readonly (true) or read-write (false).")
-	projectFlag = installCmd.Flags().StringP("project", "p", "", "specify your Google Cloud Platform project name")
-	zoneFlag = installCmd.Flags().StringP("zone", "l", "us-central", "The zone to put your Tower in.")
-	platformFlag = installCmd.Flags().StringP("platform", "c", "gae_std", "specify what type of resources you want to manage. (gae_std, gce)")
+	tokenFlag = gcpInstallCmd.Flags().StringP("token", "t", "", "The Flightcrew API token to identify your organization.")
+	versionFlag = gcpInstallCmd.Flags().StringP("version", "v", "stable", "The Flightcrew image version to install.")
+	vmFlag = gcpInstallCmd.Flags().StringP("vm", "", "flightcrew-control-tower", "The name of the VM that will be created for the Flightcrew tower in your project.")
+	writeFlag = gcpInstallCmd.Flags().BoolP("write", "w", false, "Whether the Flightcrew tower should be readonly (true) or read-write (false).")
+	projectFlag = gcpInstallCmd.Flags().StringP("project", "p", "", "specify your Google Cloud Platform project name")
+	zoneFlag = gcpInstallCmd.Flags().StringP("zone", "l", "us-central", "The zone to put your Tower in.")
+	platformFlag = gcpInstallCmd.Flags().StringP("platform", "c", "gae_std", "specify what type of resources you want to manage. (gae_std, gce)")
 }
 
 // Do runs the command logic.
@@ -35,9 +37,11 @@ func Do(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int 
 	rootCmd := &cobra.Command{Use: "flycli", SilenceUsage: true}
 
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(installCmd)
-	rootCmd.AddCommand(upgradeCmd)
-	rootCmd.AddCommand(uninstallCmd)
+	rootCmd.AddCommand(gcpCmd)
+	//	rootCmd.AddCommand(gcpUpgradeCmd)
+	//	rootCmd.AddCommand(gcpUninstallCmd)
+
+	gcpCmd.AddCommand(gcpInstallCmd)
 
 	rootCmd.SetArgs(args)
 	rootCmd.SetIn(stdin)
@@ -88,7 +92,12 @@ func ParseEnv(c *cobra.Command) Env {
 	}
 }
 
-var installCmd = &cobra.Command{
+var gcpCmd = &cobra.Command{
+	Use:   "gcp",
+	Short: "Manage Flightcrew for Google Cloud Platform (GCP).",
+}
+
+var gcpInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install a Flightcrew tower into Google Cloud Platform (GCP).",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -105,7 +114,7 @@ var installCmd = &cobra.Command{
 			return fmt.Errorf("init artifact registry: %w", err)
 		}
 
-		params := view.InstallParams{}
+		params := gcp.InstallParams{}
 
 		params.ProjectName = *projectFlag
 		if len(params.ProjectName) == 0 {
@@ -147,18 +156,21 @@ var installCmd = &cobra.Command{
 	},
 }
 
-var upgradeCmd = &cobra.Command{
+/*
+var gcpUpgradeCmd = &cobra.Command{
 	Use:   "upgrade",
-	Short: "Upgrade an existing Flightcrew tower in Google Cloud Provider (GCP) to another version.",
+	Short: "upgrade an existing Flightcrew tower in Google Cloud Provider (GCP) to another version.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("upgrade is not yet implemented")
 	},
 }
 
-var uninstallCmd = &cobra.Command{
+var gcpUninstallCmd = &cobra.Command{
 	Use:   "uninstall",
 	Short: "Uninstalls an existing Flightcrew tower and associated resources from Google Cloud Provider (GCP).",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("uninstall is not yet implemented")
 	},
 }
+
+*/

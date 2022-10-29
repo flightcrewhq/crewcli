@@ -43,11 +43,11 @@ var (
 )
 
 type installModel struct {
-	params InstallParams
-
 	width  int
 	height int
 
+	// TODO: Move the GCP stuff into a separate place. Probably group this entire block and turn it into its own model?
+	params     gcp.InstallParams
 	inputs     map[string]*wrapinput.Model
 	inputKeys  []string
 	focusIndex int
@@ -67,20 +67,7 @@ type installModel struct {
 	logStatements []string
 }
 
-type InstallParams struct {
-	VirtualMachineName  string
-	ProjectName         string
-	Zone                string
-	TowerVersion        string
-	Token               string
-	IAMRole             string
-	IAMFile             string
-	ServiceAccount      string
-	PlatformDisplayName string
-	ReadOnly            bool
-}
-
-func NewInstallModel(params InstallParams, tempDir string) installModel {
+func NewInstallModel(params gcp.InstallParams, tempDir string) installModel {
 	debug.Output("new install model!")
 	if params.VirtualMachineName == "" {
 		params.VirtualMachineName = "flightcrew-control-tower"
