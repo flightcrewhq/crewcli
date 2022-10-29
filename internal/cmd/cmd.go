@@ -10,6 +10,7 @@ import (
 
 	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/gcp"
+	gcpview "flightcrew.io/cli/internal/gcp/view"
 	"flightcrew.io/cli/internal/view"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -147,7 +148,7 @@ var gcpInstallCmd = &cobra.Command{
 			err = os.RemoveAll(dir)
 		}()
 
-		p := tea.NewProgram(view.NewInstallModel(params, dir))
+		p := tea.NewProgram(view.NewInstallModel(gcpview.NewInputs(params, dir)))
 		if err := p.Start(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
