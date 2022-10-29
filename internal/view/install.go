@@ -24,14 +24,17 @@ type installModel struct {
 	confirmYesButton *button.Button
 	confirmNoButton  *button.Button
 
+	getCommands LazyCommands
+
 	logStatements []string
 }
 
-func NewInstallModel(inputs Inputs) installModel {
+func NewInstallModel(inputs Inputs, getCommands LazyCommands) installModel {
 	debug.Output("new install model!")
 
 	m := installModel{
 		inputs:        inputs,
+		getCommands:   getCommands,
 		logStatements: make([]string, 0),
 	}
 
@@ -76,7 +79,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, nil
 					}
 
-					return NewRunModel(m.inputs.Args()), nil
+					return NewRunModel(m.inputs.Args(), m.getCommands), nil
 				}
 
 				if m.index == m.inputs.Len()+1 {

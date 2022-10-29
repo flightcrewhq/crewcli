@@ -148,7 +148,9 @@ var gcpInstallCmd = &cobra.Command{
 			err = os.RemoveAll(dir)
 		}()
 
-		p := tea.NewProgram(view.NewInstallModel(gcpview.NewInputs(params, dir)))
+		p := tea.NewProgram(view.NewInstallModel(
+			gcpview.NewInstallInputs(params, dir),
+			gcpview.NewInstallCommands))
 		if err := p.Start(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)

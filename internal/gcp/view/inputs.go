@@ -36,7 +36,7 @@ type Inputs struct {
 	defaultHelpText string
 }
 
-func NewInputs(params gcp.InstallParams, tempDir string) *Inputs {
+func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 	if params.VirtualMachineName == "" {
 		params.VirtualMachineName = "flightcrew-control-tower"
 	}
@@ -302,6 +302,9 @@ func (is *Inputs) Validate() bool {
 }
 
 func (is *Inputs) Args() map[string]string {
+	for k, v := range is.inputs {
+		is.args[k] = v.Value()
+	}
 	return is.args
 }
 
