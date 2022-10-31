@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/style"
+	"flightcrew.io/cli/internal/timeconv"
 	"flightcrew.io/cli/internal/view/wrapinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -22,6 +24,30 @@ var (
 		":", "_",
 		" ", "_",
 	)
+
+	initialInputKeys = []string{
+		keyProject,
+		keyVirtualMachine,
+		keyAPIToken,
+		keyPlatform,
+		keyPermissions,
+		keyZone,
+		keyTowerVersion,
+		keyIAMServiceAccount,
+	}
+
+	writeAppEngineInputKeys = []string{
+		keyProject,
+		keyVirtualMachine,
+		keyAPIToken,
+		keyPlatform,
+		keyPermissions,
+		keyGAEMaxVersionAge,
+		keyGAEMaxVersionCount,
+		keyZone,
+		keyTowerVersion,
+		keyIAMServiceAccount,
+	}
 )
 
 type Inputs struct {
@@ -37,19 +63,10 @@ type Inputs struct {
 
 func NewInputs(params Params) *Inputs {
 	inputs := &Inputs{
-		inputKeys: []string{
-			keyProject,
-			keyVirtualMachine,
-			keyAPIToken,
-			keyPlatform,
-			keyPermissions,
-			keyZone,
-			keyTowerVersion,
-			keyIAMServiceAccount,
-		},
-		inputs:  make(map[string]*wrapinput.Model),
-		args:    params.args,
-		tempDir: params.tempDir,
+		inputKeys: initialInputKeys,
+		inputs:    make(map[string]*wrapinput.Model),
+		args:      params.args,
+		tempDir:   params.tempDir,
 	}
 
 	if !contains(inputs.args, keyVirtualMachine) {
@@ -66,7 +83,7 @@ func NewInputs(params Params) *Inputs {
 
 	var maxTitleLength int
 
-	for _, key := range inputs.inputKeys {
+	for _, key := range allKeys {
 		var input wrapinput.Model
 		maybeSetValue := func(key string) {
 			if val, ok := inputs.args[key]; ok {
@@ -141,6 +158,18 @@ func NewInputs(params Params) *Inputs {
 			input.HelpText = "Permissions is whether Flightcrew will only read in your resources, or if Flightcrew can modify (if you ask us to) your resources."
 			maybeSetValue(keyPermissions)
 
+		case keyGAEMaxVersionAge:
+			input = wrapinput.NewFreeForm()
+			input.Title = "Max Version Age"
+			input.Freeform.Placeholder = "168h"
+			input.HelpText = "The Tower (App Engine + Write) will prune old versions that are receiving no traffic when they become older than this age (in h,m,s).\nLeave blank to disable."
+
+		case keyGAEMaxVersionCount:
+			input = wrapinput.NewFreeForm()
+			input.Title = "Max Version Count"
+			input.Freeform.Placeholder = "30"
+			input.HelpText = "The Tower (App Engine + Write) will prune old versions that are receiving no traffic when the number of old versions exceeds this count.\nLeave blank to disable."
+
 		}
 
 		input.Blur()
@@ -198,10 +227,10 @@ func (inputs *Inputs) Reset() {
 func (inputs *Inputs) Validate() bool {
 	inputs.confirming = true
 	hasErrors := false
-	for k, val := range inputs.inputs {
+	for k, input := range inputs.inputs {
 		setError := func(err error) bool {
 			if err != nil {
-				val.SetError(err)
+				input.SetError(err)
 				debug.Output(err.Error())
 				hasErrors = true
 				return true
@@ -209,31 +238,31 @@ func (inputs *Inputs) Validate() bool {
 			return false
 		}
 
-		if val.Required && len(val.Value()) == 0 {
+		if input.Required && len(input.Value()) == 0 {
 			setError(errors.New("required"))
 			continue
 		}
 
 		switch k {
 		case keyTowerVersion:
-			version, err := gcp.GetTowerImageVersion(val.Value())
+			version, err := gcp.GetTowerImageVersion(input.Value())
 			if setError(err) {
 				debug.Output("convert tower version got error: %v", err)
 				break
 			}
 
-			val.SetConverted(version)
+			input.SetConverted(version)
 			debug.Output("convert tower version is %s", version)
 
 		case keyPlatform:
-			displayName := val.Value()
+			displayName := input.Value()
 			platform, ok := constants.DisplayToPlatform[displayName]
 			if !ok {
 				setError(errors.New("invalid platform"))
 				break
 			}
 
-			val.SetConverted(platform)
+			input.SetConverted(platform)
 
 		case keyPermissions:
 			platformInput := inputs.inputs[keyPlatform]
@@ -249,7 +278,7 @@ func (inputs *Inputs) Validate() bool {
 				break
 			}
 
-			permission := val.Value()
+			permission := input.Value()
 			permSettings, ok := perms[permission]
 			if !ok {
 				setError(fmt.Errorf("%s permissions are not supported for platform '%s'", permission, platformInput.Value()))
@@ -275,12 +304,50 @@ func (inputs *Inputs) Validate() bool {
 			inputs.args[keyIAMFile] = f.Name()
 			inputs.args[keyIAMRole] = permSettings.Role
 			inputs.args[keyImagePath] = gcp.ImagePath
-			val.SetInfo(fmt.Sprintf("see %s", f.Name()))
+			input.SetInfo(fmt.Sprintf("see %s", f.Name()))
+
+		case keyGAEMaxVersionCount:
+			value := input.Value()
+			if len(value) == 0 {
+				break
+			}
+
+			numMaxVersions, err := strconv.Atoi(value)
+			if err != nil {
+				setError(errors.New("must be a positive integer"))
+				break
+			}
+
+			if numMaxVersions < 1 {
+				setError(errors.New("must be positive"))
+			}
+
+		case keyGAEMaxVersionAge:
+			value := input.Value()
+			if len(value) == 0 {
+				break
+			}
+
+			dur, err := timeconv.ParseDuration(value)
+			if err != nil {
+				setError(errors.New("must be a duration (mo, w, d, h, m, s) (e.g. 1mo, 2w, 5d3h)"))
+				break
+			}
+
+			converted, err := convertDuration(dur)
+			if setError(err) {
+				break
+			}
+
+			input.SetConverted(converted)
+
 		}
 	}
 
 	return !hasErrors
 }
+
+var convertDuration = timeconv.GetDurationFormatter([]string{"h", "m", "s"})
 
 func (inputs *Inputs) Args() map[string]string {
 	for k, v := range inputs.inputs {
@@ -291,8 +358,8 @@ func (inputs *Inputs) Args() map[string]string {
 
 func (inputs *Inputs) View() string {
 	var b strings.Builder
-	for i := range inputs.inputKeys {
-		b.WriteString(inputs.getInput(i).View(wrapinput.ViewParams{
+	for _, k := range inputs.inputKeys {
+		b.WriteString(inputs.inputs[k].View(wrapinput.ViewParams{
 			ShowValue: inputs.confirming,
 		}))
 		b.WriteRune('\n')
@@ -310,6 +377,8 @@ func (inputs *Inputs) View() string {
 }
 
 func (inputs *Inputs) Update(msg tea.Msg) tea.Cmd {
+	defer inputs.updateInputKeys()
+
 	if inputs.index < len(inputs.inputs) {
 		var cmd tea.Cmd
 		k := inputs.inputKeys[inputs.index]
@@ -321,7 +390,7 @@ func (inputs *Inputs) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (inputs *Inputs) NextEmpty(i int) int {
-	for ; i < len(inputs.inputs); i++ {
+	for ; i < len(inputs.inputKeys); i++ {
 		if len(inputs.getInput(i).Value()) == 0 {
 			break
 		}
@@ -335,13 +404,27 @@ func (inputs *Inputs) getInput(i int) *wrapinput.Model {
 }
 
 func (inputs *Inputs) Focus(i int) tea.Cmd {
-	debug.Output("focus from %d to %d", inputs.index, i)
+	if i == inputs.index {
+		return nil
+	}
+
 	inputs.getInput(inputs.index).Blur()
-	if i >= len(inputs.inputs) {
+	if i >= len(inputs.inputKeys) {
 		return nil
 	}
 
 	cmd := inputs.getInput(i).Focus()
 	inputs.index = i
 	return cmd
+}
+
+func (inputs *Inputs) updateInputKeys() {
+	platformInput := inputs.inputs[keyPlatform]
+	permissionsInput := inputs.inputs[keyPermissions]
+	if platformInput.Value() == constants.GoogleAppEngineStdDisplay &&
+		permissionsInput.Value() == constants.Write {
+		inputs.inputKeys = writeAppEngineInputKeys
+	} else {
+		inputs.inputKeys = initialInputKeys
+	}
 }

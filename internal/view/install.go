@@ -42,6 +42,7 @@ func NewInstallModel(inputs Inputs, getCommands LazyCommands) installModel {
 	m.confirmYesButton, _ = button.New("Continue", 12)
 	m.confirmNoButton, _ = button.New("Edit", 12)
 
+	m.inputs.Update(nil)
 	m.index = m.inputs.NextEmpty(m.index)
 	m.inputs.Focus(m.index)
 

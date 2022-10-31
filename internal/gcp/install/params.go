@@ -18,20 +18,37 @@ var (
 )
 
 const (
-	keyProject           = "${GOOGLE_PROJECT_ID}"
-	keyTowerVersion      = "${TOWER_VERSION}"
-	keyZone              = "${ZONE}"
-	keyVirtualMachine    = "${VIRTUAL_MACHINE}"
-	keyAPIToken          = "${API_TOKEN}"
-	keyIAMRole           = "${IAM_ROLE}"
-	keyIAMServiceAccount = "${SERVICE_ACCOUNT}"
-	keyIAMFile           = "${IAM_FILE}"
-	keyPermissions       = "${PERMISSIONS}"
-	keyRPCHost           = "${RPC_HOST}"
-	keyPlatform          = "${PLATFORM}"
-	keyTrafficRouter     = "${TRAFFIC_ROUTER}"
-	keyImagePath         = "${IMAGE_PATH}"
-	keyTempDir           = "${TEMP_DIR}"
+	keyProject            = "${GOOGLE_PROJECT_ID}"
+	keyTowerVersion       = "${TOWER_VERSION}"
+	keyZone               = "${ZONE}"
+	keyVirtualMachine     = "${VIRTUAL_MACHINE}"
+	keyAPIToken           = "${API_TOKEN}"
+	keyIAMRole            = "${IAM_ROLE}"
+	keyIAMServiceAccount  = "${SERVICE_ACCOUNT}"
+	keyIAMFile            = "${IAM_FILE}"
+	keyPermissions        = "${PERMISSIONS}"
+	keyRPCHost            = "${RPC_HOST}"
+	keyPlatform           = "${PLATFORM}"
+	keyTrafficRouter      = "${TRAFFIC_ROUTER}"
+	keyImagePath          = "${IMAGE_PATH}"
+	keyTempDir            = "${TEMP_DIR}"
+	keyGAEMaxVersionCount = "${GAE_MAX_VERSION_COUNT}"
+	keyGAEMaxVersionAge   = "${GAE_MAX_VERSION_AGE}"
+)
+
+var (
+	allKeys = []string{
+		keyProject,
+		keyTowerVersion,
+		keyZone,
+		keyVirtualMachine,
+		keyAPIToken,
+		keyIAMServiceAccount,
+		keyPermissions,
+		keyPlatform,
+		keyGAEMaxVersionCount,
+		keyGAEMaxVersionAge,
+	}
 )
 
 type Params struct {
