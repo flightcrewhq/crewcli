@@ -7,7 +7,6 @@ import (
 	"flightcrew.io/cli/internal/view/radioinput"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type ValidateParams struct {
@@ -48,14 +47,13 @@ func NewFreeForm() Model {
 }
 
 type ViewParams struct {
-	ShowValue  bool
-	TitleStyle lipgloss.Style
+	ShowValue bool
 }
 
 func (m Model) View(params ViewParams) string {
 	var b strings.Builder
 
-	b.WriteString(params.TitleStyle.Render(m.Title))
+	b.WriteString(m.Title)
 	if m.Required {
 		b.WriteString(style.Required("*"))
 	} else {

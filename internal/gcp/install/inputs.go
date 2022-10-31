@@ -32,7 +32,6 @@ type Inputs struct {
 	index           int
 	args            map[string]string
 	confirming      bool
-	titleStyle      lipgloss.Style
 	defaultHelpText string
 }
 
@@ -179,7 +178,10 @@ func NewInputs(params Params) *Inputs {
 		}
 	}
 
-	inputs.titleStyle = lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength).MarginLeft(2)
+	renderTitle := lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength).MarginLeft(2).Render
+	for k := range inputs.inputs {
+		inputs.inputs[k].Title = renderTitle(inputs.inputs[k].Title)
+	}
 
 	return inputs
 }
@@ -293,8 +295,7 @@ func (inputs *Inputs) View() string {
 	var b strings.Builder
 	for i := range inputs.inputKeys {
 		b.WriteString(inputs.getInput(i).View(wrapinput.ViewParams{
-			ShowValue:  inputs.confirming,
-			TitleStyle: inputs.titleStyle,
+			ShowValue: inputs.confirming,
 		}))
 		b.WriteRune('\n')
 	}
