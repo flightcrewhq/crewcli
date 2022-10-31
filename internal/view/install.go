@@ -156,6 +156,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m installModel) View() string {
 	var b strings.Builder
+	// TODO This should be instantiated by the command
 	desc, _ := style.Glamour.Render(`## Welcome!
 
 This is the Flightcrew installation CLI! To get started, please fill in the information below.`)

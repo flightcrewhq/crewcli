@@ -36,22 +36,41 @@ func InitArtifactRegistry() error {
 func GetTowerImageVersion(version string) (string, error) {
 	images := make([]*registry.DockerImage, 0)
 
+	var resp []*registry.DockerImage
 	var pageToken string
+	var err error
 	for {
-		resp, token, err := queryDockerImageAPI(pageToken)
+		resp, pageToken, err = queryDockerImageAPI(pageToken)
 		if err != nil {
 			return "", fmt.Errorf("query docker image api: %w", err)
 		}
 
 		images = append(images, resp...)
 
-		if token == "" {
+		if pageToken == "" {
 			break
 		}
-
-		pageToken = token
 	}
 
+	return getDesiredImageVersion(images, version)
+}
+
+func queryDockerImageAPI(pageToken string) ([]*registry.DockerImage, string, error) {
+	dockerImageSvc := ArtifactRegistryService.Projects.Locations.Repositories.DockerImages
+	call := dockerImageSvc.List(parent).PageSize(pageSize).PageToken(pageToken)
+	resp, err := call.Do()
+	if err != nil {
+		return nil, "", fmt.Errorf("list docker images: %w", err)
+	}
+
+	if resp.HTTPStatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("google artifact registry api returned not OK: %d", resp.HTTPStatusCode)
+	}
+
+	return resp.DockerImages, resp.NextPageToken, nil
+}
+
+func getDesiredImageVersion(images []*registry.DockerImage, version string) (string, error) {
 	var desiredImage *registry.DockerImage
 	for i, image := range images {
 		for _, tag := range image.Tags {
@@ -81,19 +100,4 @@ func GetTowerImageVersion(version string) (string, error) {
 	}
 
 	return "", fmt.Errorf("no valid tower version tag found from %s", version)
-}
-
-func queryDockerImageAPI(pageToken string) ([]*registry.DockerImage, string, error) {
-	dockerImageSvc := ArtifactRegistryService.Projects.Locations.Repositories.DockerImages
-	call := dockerImageSvc.List(parent).PageSize(pageSize).PageToken(pageToken)
-	resp, err := call.Do()
-	if err != nil {
-		return nil, "", fmt.Errorf("list docker images: %w", err)
-	}
-
-	if resp.HTTPStatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("google artifact registry api returned not OK: %d", resp.HTTPStatusCode)
-	}
-
-	return resp.DockerImages, resp.NextPageToken, nil
 }
