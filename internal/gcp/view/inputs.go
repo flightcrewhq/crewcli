@@ -159,10 +159,10 @@ func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 			radio := input.Radio
 			radio.SetPrevKeys([]string{"left"})
 			radio.SetNextKeys([]string{"right"})
-			if params.ReadOnly {
-				radio.SetValue(constants.Read)
-			} else {
+			if params.Write {
 				radio.SetValue(constants.Write)
+			} else {
+				radio.SetValue(constants.Read)
 			}
 
 		}

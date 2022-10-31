@@ -10,5 +10,5 @@ type InstallParams struct {
 	IAMFile             string
 	ServiceAccount      string
 	PlatformDisplayName string
-	ReadOnly            bool
+	Write               bool
 }

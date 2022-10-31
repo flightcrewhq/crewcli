@@ -126,7 +126,7 @@ var gcpInstallCmd = &cobra.Command{
 		params.Zone = *zoneFlag
 		params.TowerVersion = *versionFlag
 		params.Token = *tokenFlag
-		params.ReadOnly = !*writeFlag
+		params.Write = *writeFlag
 		params.VirtualMachineName = *vmFlag
 
 		displayName, ok := constants.KeyToDisplay[*platformFlag]
