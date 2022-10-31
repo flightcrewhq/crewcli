@@ -82,7 +82,6 @@ func NewInputs(params Params) *Inputs {
 			input.Title = "Project ID"
 			input.HelpText = "Project ID is the unique string identifier for your Google Cloud Platform project."
 			input.Required = true
-			input.Focus()
 			maybeSetValue(keyProject)
 
 		case keyVirtualMachine:
@@ -144,6 +143,7 @@ func NewInputs(params Params) *Inputs {
 
 		}
 
+		input.Blur()
 		inputs.inputs[key] = &input
 
 		if titleLength := len(inputs.inputs[key].Title); titleLength > maxTitleLength {
@@ -310,17 +310,14 @@ func (inputs *Inputs) View() string {
 }
 
 func (inputs *Inputs) Update(msg tea.Msg) tea.Cmd {
-	var cmds = make([]tea.Cmd, len(inputs.inputs))
-	var i int
-
-	// Only inputs with Focus() set will respond, so it's safe to simply
-	// update all of them here without any further logic.
-	for k := range inputs.inputs {
-		*inputs.inputs[k], cmds[i] = inputs.inputs[k].Update(msg)
-		i++
+	if inputs.index < len(inputs.inputs) {
+		var cmd tea.Cmd
+		k := inputs.inputKeys[inputs.index]
+		*inputs.inputs[k], cmd = inputs.inputs[k].Update(msg)
+		return cmd
 	}
 
-	return tea.Batch(cmds...)
+	return nil
 }
 
 func (inputs *Inputs) NextEmpty(i int) int {
