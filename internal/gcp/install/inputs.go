@@ -80,6 +80,8 @@ func NewInputs(params Params) *Inputs {
 	}
 	inputs.args[keyRPCHost] = "api.flightcrew.io"
 	inputs.args[keyTrafficRouter] = ""
+	inputs.args[keyGAEMaxVersionAge] = ""
+	inputs.args[keyGAEMaxVersionCount] = ""
 
 	var maxTitleLength int
 
@@ -299,7 +301,7 @@ func (inputs *Inputs) Validate() bool {
 
 			if permission == constants.Write {
 				inputs.args[keyTrafficRouter] = fmt.Sprintf(`
-  --container-env=TRAFFIC_ROUTER=%s \`, platform)
+	--container-env=TRAFFIC_ROUTER=%s \`, platform)
 			}
 			inputs.args[keyIAMFile] = f.Name()
 			inputs.args[keyIAMRole] = permSettings.Role
@@ -322,6 +324,10 @@ func (inputs *Inputs) Validate() bool {
 				setError(errors.New("must be positive"))
 			}
 
+			input.SetInfo("✅")
+			input.SetConverted(fmt.Sprintf(`
+	--container-env=APPENGINE_MAX_VERSION_COUNT=%d \`, numMaxVersions))
+
 		case keyGAEMaxVersionAge:
 			value := input.Value()
 			if len(value) == 0 {
@@ -339,7 +345,9 @@ func (inputs *Inputs) Validate() bool {
 				break
 			}
 
-			input.SetConverted(converted)
+			input.SetInfo(converted)
+			input.SetConverted(fmt.Sprintf(`
+	--container-env=APPENGINE_MAX_VERSION_AGE=%s \`, converted))
 
 		}
 	}
@@ -350,8 +358,8 @@ func (inputs *Inputs) Validate() bool {
 var convertDuration = timeconv.GetDurationFormatter([]string{"h", "m", "s"})
 
 func (inputs *Inputs) Args() map[string]string {
-	for k, v := range inputs.inputs {
-		inputs.args[k] = v.Value()
+	for _, k := range inputs.inputKeys {
+		inputs.args[k] = inputs.inputs[k].Value()
 	}
 	return inputs.args
 }
@@ -408,14 +416,19 @@ func (inputs *Inputs) Focus(i int) tea.Cmd {
 		return nil
 	}
 
-	inputs.getInput(inputs.index).Blur()
-	if i >= len(inputs.inputKeys) {
-		return nil
+	defer func() {
+		inputs.index = i
+	}()
+
+	if inputs.index < inputs.Len() {
+		inputs.getInput(inputs.index).Blur()
 	}
 
-	cmd := inputs.getInput(i).Focus()
-	inputs.index = i
-	return cmd
+	if i < len(inputs.inputKeys) {
+		return inputs.getInput(i).Focus()
+	}
+
+	return nil
 }
 
 func (inputs *Inputs) updateInputKeys() {

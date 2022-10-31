@@ -61,17 +61,16 @@ https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 		checkVMExists,
 		command.NewWriteModel(command.Opts{
 			SkipIfSucceed: checkVMExists,
-			Description:   "Create a VM instance attached to Flightcrew's service account, and run the Control Tower image.\n\nYou can open `${ENV_FILE}` to edit your desired environment variables before you run this command.",
+			Description:   "Create a VM instance attached to Flightcrew's service account, and run the Control Tower image.",
 			// TODO(chris): Switch between prod and dev
 			Command: `gcloud compute instances create-with-container ${VIRTUAL_MACHINE} \
 	--project=${GOOGLE_PROJECT_ID} \
 	--container-command="/ko-app/tower" \
-	--container-image=${IMAGE_PATH}:${TOWER_VERSION} \
+	--container-image="${IMAGE_PATH}:${TOWER_VERSION}" \
 	--container-arg="--debug=true" \
-	--container-env-file=${ENV_FILE} \
-	--container-env=FC_API_KEY=${API_TOKEN} \
-	--container-env=CLOUD_PLATFORM=${PLATFORM} \
-	--container-env=FC_PACKAGE_VERSION=${TOWER_VERSION} \${TRAFFIC_ROUTER}
+	--container-env="FC_API_KEY=${API_TOKEN}" \
+	--container-env=CLOUD_PLATFORM=${PLATFORM} \${TRAFFIC_ROUTER}${GAE_MAX_VERSION_COUNT}${GAE_MAX_VERSION_AGE}
+	--container-env=FC_PACKAGE_VERSION=${TOWER_VERSION} \
 	--container-env=METRIC_PROVIDERS=stackdriver \
 	--container-env=FC_RPC_CONNECT_HOST=${RPC_HOST} \
 	--container-env=FC_RPC_CONNECT_PORT=443 \

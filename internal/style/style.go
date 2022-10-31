@@ -5,7 +5,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const defaultWidth = 80
+const defaultWidth = 85
 
 var (
 	Focused = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Bold(true)
@@ -48,7 +48,7 @@ func init() {
 	Glamour, err = glamour.NewTermRenderer(
 		// detect background color and pick either the default dark or light theme
 		glamour.WithAutoStyle(),
-		// wrap output at specific width (default is 80)
+		// wrap output at specific width
 		glamour.WithWordWrap(defaultWidth),
 	)
 

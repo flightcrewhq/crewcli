@@ -137,23 +137,23 @@ func (m *Model) SetValue(val string) {
 }
 
 func (m Model) Value() string {
+	if len(m.validation.Converted) > 0 {
+		return m.validation.Converted
+	}
+
 	if m.Radio != nil {
-		return m.Radio.Value()
+		if val := m.Radio.Value(); len(val) > 0 {
+			return val
+		}
 	}
 
 	if m.Freeform != nil {
-		if len(m.validation.Converted) > 0 {
-			return m.validation.Converted
-		}
-
 		if val := m.Freeform.Value(); len(val) > 0 {
 			return val
 		}
-
-		return m.Default
 	}
 
-	return ""
+	return m.Default
 }
 
 func (m *Model) SetInfo(infoMsg string) {
