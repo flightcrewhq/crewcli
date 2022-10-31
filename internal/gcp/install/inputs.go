@@ -216,7 +216,7 @@ func NewInputs(params Params) *Inputs {
 }
 
 func (inputs *Inputs) Len() int {
-	return len(inputs.inputs)
+	return len(inputs.inputKeys)
 }
 
 func (inputs *Inputs) Reset() {
@@ -387,7 +387,7 @@ func (inputs *Inputs) View() string {
 func (inputs *Inputs) Update(msg tea.Msg) tea.Cmd {
 	defer inputs.updateInputKeys()
 
-	if inputs.index < len(inputs.inputs) {
+	if inputs.index < len(inputs.inputKeys) {
 		var cmd tea.Cmd
 		k := inputs.inputKeys[inputs.index]
 		*inputs.inputs[k], cmd = inputs.inputs[k].Update(msg)
@@ -434,8 +434,8 @@ func (inputs *Inputs) Focus(i int) tea.Cmd {
 func (inputs *Inputs) updateInputKeys() {
 	platformInput := inputs.inputs[keyPlatform]
 	permissionsInput := inputs.inputs[keyPermissions]
-	if platformInput.Value() == constants.GoogleAppEngineStdDisplay &&
-		permissionsInput.Value() == constants.Write {
+	if platformInput.Radio.Value() == constants.GoogleAppEngineStdDisplay &&
+		permissionsInput.Radio.Value() == constants.Write {
 		inputs.inputKeys = writeAppEngineInputKeys
 	} else {
 		inputs.inputKeys = initialInputKeys

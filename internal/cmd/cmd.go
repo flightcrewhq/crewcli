@@ -107,7 +107,7 @@ var gcpInstallCmd = &cobra.Command{
 		}
 		defer cleanup()
 
-		p := tea.NewProgram(view.NewInstallModel(
+		p := tea.NewProgram(view.NewInputsModel(
 			gcpinstall.NewInputs(env),
 			gcpinstall.NewCommands))
 		if err := p.Start(); err != nil {

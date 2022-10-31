@@ -31,7 +31,7 @@ type Inputs interface {
 	NextEmpty(i int) int
 }
 
-type installModel struct {
+type inputsModel struct {
 	width  int
 	height int
 
@@ -50,10 +50,10 @@ type installModel struct {
 	logStatements []string
 }
 
-func NewInstallModel(inputs Inputs, getCommands LazyCommands) installModel {
+func NewInputsModel(inputs Inputs, getCommands LazyCommands) inputsModel {
 	debug.Output("new install model!")
 
-	m := installModel{
+	m := inputsModel{
 		inputs:        inputs,
 		getCommands:   getCommands,
 		logStatements: make([]string, 0),
@@ -70,11 +70,11 @@ func NewInstallModel(inputs Inputs, getCommands LazyCommands) installModel {
 	return m
 }
 
-func (m installModel) Init() tea.Cmd {
+func (m inputsModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m inputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -176,7 +176,7 @@ func (m installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, m.inputs.Update(msg)
 }
 
-func (m installModel) View() string {
+func (m inputsModel) View() string {
 	var b strings.Builder
 	// TODO This should be instantiated by the command
 	desc, _ := style.Glamour.Render(`## Welcome!
