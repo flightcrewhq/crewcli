@@ -11,7 +11,7 @@ import (
 
 type ValidateParams struct {
 	Converted    string
-	InfoMessage  string
+	InfoMessage  *string
 	ErrorMessage string
 }
 
@@ -71,9 +71,11 @@ func (m Model) View(params ViewParams) string {
 		if len(m.validation.ErrorMessage) > 0 {
 			b.WriteString(" ❗️ ")
 			b.WriteString(style.Error(m.validation.ErrorMessage))
-		} else if len(m.validation.InfoMessage) > 0 {
-			b.WriteString(" → ")
-			b.WriteString(style.Convert(m.validation.InfoMessage))
+		} else if m.validation.InfoMessage != nil {
+			if len(*m.validation.InfoMessage) > 0 {
+				b.WriteString(" → ")
+				b.WriteString(style.Convert(*m.validation.InfoMessage))
+			}
 		} else if len(m.validation.Converted) > 0 {
 			b.WriteString(" → ")
 			b.WriteString(style.Convert(m.validation.Converted))
@@ -158,7 +160,7 @@ func (m Model) Value() string {
 
 func (m *Model) SetInfo(infoMsg string) {
 	m.validating = true
-	m.validation.InfoMessage = infoMsg
+	m.validation.InfoMessage = &infoMsg
 }
 
 func (m *Model) SetConverted(convertedVal string) {

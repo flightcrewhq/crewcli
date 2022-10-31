@@ -324,7 +324,7 @@ func (inputs *Inputs) Validate() bool {
 				setError(errors.New("must be positive"))
 			}
 
-			input.SetInfo("✅")
+			input.SetInfo("")
 			input.SetConverted(fmt.Sprintf(`
 	--container-env=APPENGINE_MAX_VERSION_COUNT=%d \`, numMaxVersions))
 
