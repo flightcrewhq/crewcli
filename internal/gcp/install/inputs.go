@@ -38,31 +38,31 @@ type Inputs struct {
 func NewInputs(params Params) *Inputs {
 	inputs := &Inputs{
 		inputKeys: []string{
-			KeyProject,
-			KeyVirtualMachine,
-			KeyAPIToken,
-			KeyPlatform,
-			KeyPermissions,
-			KeyZone,
-			KeyTowerVersion,
-			KeyIAMServiceAccount,
+			keyProject,
+			keyVirtualMachine,
+			keyAPIToken,
+			keyPlatform,
+			keyPermissions,
+			keyZone,
+			keyTowerVersion,
+			keyIAMServiceAccount,
 		},
 		inputs:  make(map[string]*wrapinput.Model),
 		args:    params.args,
 		tempDir: params.tempDir,
 	}
 
-	if !contains(inputs.args, KeyVirtualMachine) {
-		inputs.args[KeyVirtualMachine] = "flightcrew-control-tower"
+	if !contains(inputs.args, keyVirtualMachine) {
+		inputs.args[keyVirtualMachine] = "flightcrew-control-tower"
 	}
-	if !contains(inputs.args, KeyZone) {
-		inputs.args[KeyZone] = "us-central"
+	if !contains(inputs.args, keyZone) {
+		inputs.args[keyZone] = "us-central"
 	}
-	if !contains(inputs.args, KeyTowerVersion) {
-		inputs.args[KeyTowerVersion] = "stable"
+	if !contains(inputs.args, keyTowerVersion) {
+		inputs.args[keyTowerVersion] = "stable"
 	}
-	inputs.args[KeyRPCHost] = "api.flightcrew.io"
-	inputs.args[KeyTrafficRouter] = ""
+	inputs.args[keyRPCHost] = "api.flightcrew.io"
+	inputs.args[keyTrafficRouter] = ""
 
 	var maxTitleLength int
 
@@ -75,7 +75,7 @@ func NewInputs(params Params) *Inputs {
 		}
 
 		switch key {
-		case KeyProject:
+		case keyProject:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.CharLimit = 0
 			input.Freeform.Placeholder = "project-id-1234"
@@ -83,9 +83,9 @@ func NewInputs(params Params) *Inputs {
 			input.HelpText = "Project ID is the unique string identifier for your Google Cloud Platform project."
 			input.Required = true
 			input.Focus()
-			maybeSetValue(KeyProject)
+			maybeSetValue(keyProject)
 
-		case KeyVirtualMachine:
+		case keyVirtualMachine:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "flightcrew-control-tower"
 			input.Freeform.CharLimit = 64
@@ -93,57 +93,54 @@ func NewInputs(params Params) *Inputs {
 			input.Default = "flightcrew-control-tower"
 			input.Required = true
 			input.HelpText = "VM Name is what the (to be installed) Flightcrew virtual machine instance will be named."
-			maybeSetValue(KeyVirtualMachine)
+			maybeSetValue(keyVirtualMachine)
 
-		case KeyZone:
+		case keyZone:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "us-central"
 			input.Freeform.CharLimit = 32
 			input.Title = "Zone"
 			input.Default = "us-central"
 			input.HelpText = "Zone is the Google zone where the (to be installed) Flightcrew virtual machine instance will be located."
-			maybeSetValue(KeyZone)
+			maybeSetValue(keyZone)
 
-		case KeyTowerVersion:
+		case keyTowerVersion:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "stable"
 			input.Title = "Tower Version"
 			input.HelpText = "Tower Version is the version of the Tower image that will be installed. (recommended: `stable`)"
-			maybeSetValue(KeyTowerVersion)
+			maybeSetValue(keyTowerVersion)
 
-		case KeyAPIToken:
+		case keyAPIToken:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "api-token"
 			input.Title = "API Token"
 			input.Required = true
 			input.HelpText = "API token is the value provided by Flightcrew to identify your organization."
-			maybeSetValue(KeyAPIToken)
+			maybeSetValue(keyAPIToken)
 
-		case KeyIAMServiceAccount:
+		case keyIAMServiceAccount:
 			input = wrapinput.NewFreeForm()
 			input.Title = "Service Account"
 			input.Default = "flightcrew-runner-test-chris"
 			input.SetValue("flightcrew-runner-test-chris")
 			input.HelpText = "Service Account is the name of the (to be created) IAM service account to run the Flightcrew Tower."
 
-		case KeyPlatform:
+		case keyPlatform:
 			input = wrapinput.NewRadio([]string{
 				constants.GoogleAppEngineStdDisplay,
 				constants.GoogleComputeEngineDisplay})
 			input.Title = "Platform"
 			input.HelpText = "Platform is which Google Cloud Provider resources Flightcrew will read in."
-			maybeSetValue(KeyPlatform)
+			maybeSetValue(keyPlatform)
 
-		case KeyPermissions:
+		case keyPermissions:
 			input = wrapinput.NewRadio([]string{
 				constants.Read,
 				constants.Write})
 			input.Title = "Permissions"
 			input.HelpText = "Permissions is whether Flightcrew will only read in your resources, or if Flightcrew can modify (if you ask us to) your resources."
-			radio := input.Radio
-			radio.SetPrevKeys([]string{"left"})
-			radio.SetNextKeys([]string{"right"})
-			maybeSetValue(KeyPermissions)
+			maybeSetValue(keyPermissions)
 
 		}
 
@@ -178,6 +175,7 @@ func NewInputs(params Params) *Inputs {
 		}
 	}
 
+	// Format titles
 	renderTitle := lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength).MarginLeft(2).Render
 	for k := range inputs.inputs {
 		inputs.inputs[k].Title = renderTitle(inputs.inputs[k].Title)
@@ -217,7 +215,7 @@ func (inputs *Inputs) Validate() bool {
 		}
 
 		switch k {
-		case KeyTowerVersion:
+		case keyTowerVersion:
 			version, err := gcp.GetTowerImageVersion(val.Value())
 			if setError(err) {
 				debug.Output("convert tower version got error: %v", err)
@@ -227,7 +225,7 @@ func (inputs *Inputs) Validate() bool {
 			val.SetConverted(version)
 			debug.Output("convert tower version is %s", version)
 
-		case KeyPlatform:
+		case keyPlatform:
 			displayName := val.Value()
 			platform, ok := constants.DisplayToPlatform[displayName]
 			if !ok {
@@ -237,11 +235,11 @@ func (inputs *Inputs) Validate() bool {
 
 			val.SetConverted(platform)
 
-		case KeyPermissions:
-			platformInput := inputs.inputs[KeyPlatform]
+		case keyPermissions:
+			platformInput := inputs.inputs[keyPlatform]
 			platform, ok := constants.DisplayToPlatform[platformInput.Value()]
 			if !ok {
-				// Validation of this field occurs in KeyPlatform.
+				// Validation of this field occurs in keyPlatform.
 				break
 			}
 
@@ -271,12 +269,12 @@ func (inputs *Inputs) Validate() bool {
 			}
 
 			if permission == constants.Write {
-				inputs.args[KeyTrafficRouter] = fmt.Sprintf(`
+				inputs.args[keyTrafficRouter] = fmt.Sprintf(`
   --container-env=TRAFFIC_ROUTER=%s \`, platform)
 			}
-			inputs.args[KeyIAMFile] = f.Name()
-			inputs.args[KeyIAMRole] = permSettings.Role
-			inputs.args[KeyImagePath] = gcp.ImagePath
+			inputs.args[keyIAMFile] = f.Name()
+			inputs.args[keyIAMRole] = permSettings.Role
+			inputs.args[keyImagePath] = gcp.ImagePath
 			val.SetInfo(fmt.Sprintf("see %s", f.Name()))
 		}
 	}

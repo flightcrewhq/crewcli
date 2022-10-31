@@ -18,20 +18,20 @@ var (
 )
 
 const (
-	KeyProject           = "${GOOGLE_PROJECT_ID}"
-	KeyTowerVersion      = "${TOWER_VERSION}"
-	KeyZone              = "${ZONE}"
-	KeyVirtualMachine    = "${VIRTUAL_MACHINE}"
-	KeyAPIToken          = "${API_TOKEN}"
-	KeyIAMRole           = "${IAM_ROLE}"
-	KeyIAMServiceAccount = "${SERVICE_ACCOUNT}"
-	KeyIAMFile           = "${IAM_FILE}"
-	KeyPermissions       = "${PERMISSIONS}"
-	KeyRPCHost           = "${RPC_HOST}"
-	KeyPlatform          = "${PLATFORM}"
-	KeyTrafficRouter     = "${TRAFFIC_ROUTER}"
-	KeyImagePath         = "${IMAGE_PATH}"
-	KeyTempDir           = "${TEMP_DIR}"
+	keyProject           = "${GOOGLE_PROJECT_ID}"
+	keyTowerVersion      = "${TOWER_VERSION}"
+	keyZone              = "${ZONE}"
+	keyVirtualMachine    = "${VIRTUAL_MACHINE}"
+	keyAPIToken          = "${API_TOKEN}"
+	keyIAMRole           = "${IAM_ROLE}"
+	keyIAMServiceAccount = "${SERVICE_ACCOUNT}"
+	keyIAMFile           = "${IAM_FILE}"
+	keyPermissions       = "${PERMISSIONS}"
+	keyRPCHost           = "${RPC_HOST}"
+	keyPlatform          = "${PLATFORM}"
+	keyTrafficRouter     = "${TRAFFIC_ROUTER}"
+	keyImagePath         = "${IMAGE_PATH}"
+	keyTempDir           = "${TEMP_DIR}"
 )
 
 type Params struct {
@@ -54,22 +54,22 @@ func ParseFlags(cmd *cobra.Command) (Params, func(), error) {
 		args: make(map[string]string),
 	}
 
-	maybeAddEnv(params.args, KeyProject, *projectFlag)
-	if !contains(params.args, KeyProject) {
+	maybeAddEnv(params.args, keyProject, *projectFlag)
+	if !contains(params.args, keyProject) {
 		if projects, err := gcp.GetProjectsFromEnvironment(); err == nil {
-			maybeAddEnv(params.args, KeyProject, strings.Join(projects, ","))
+			maybeAddEnv(params.args, keyProject, strings.Join(projects, ","))
 		}
 	}
 
-	maybeAddEnv(params.args, KeyZone, *zoneFlag)
-	maybeAddEnv(params.args, KeyTowerVersion, *versionFlag)
-	maybeAddEnv(params.args, KeyAPIToken, *tokenFlag)
-	maybeAddEnv(params.args, KeyVirtualMachine, *vmFlag)
+	maybeAddEnv(params.args, keyZone, *zoneFlag)
+	maybeAddEnv(params.args, keyTowerVersion, *versionFlag)
+	maybeAddEnv(params.args, keyAPIToken, *tokenFlag)
+	maybeAddEnv(params.args, keyVirtualMachine, *vmFlag)
 
 	if *writeFlag {
-		params.args[KeyPermissions] = constants.Write
+		params.args[keyPermissions] = constants.Write
 	} else {
-		params.args[KeyPermissions] = constants.Read
+		params.args[keyPermissions] = constants.Read
 	}
 
 	if displayName, ok := constants.KeyToDisplay[*platformFlag]; !ok {
@@ -79,7 +79,7 @@ func ParseFlags(cmd *cobra.Command) (Params, func(), error) {
 		}
 		return Params{}, nil, fmt.Errorf("invalid --platform flag: %s", strings.Join(desired, ", "))
 	} else {
-		maybeAddEnv(params.args, KeyPlatform, displayName)
+		maybeAddEnv(params.args, keyPlatform, displayName)
 	}
 
 	dir, err := os.MkdirTemp("", "flightcrew-gcp-install-*")
