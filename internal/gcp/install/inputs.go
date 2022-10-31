@@ -239,7 +239,7 @@ func (inputs *Inputs) Validate() bool {
 			platformInput := inputs.inputs[KeyPlatform]
 			platform, ok := constants.DisplayToPlatform[platformInput.Value()]
 			if !ok {
-				// Validation of this field occurs in KeyPlatforinputs.
+				// Validation of this field occurs in KeyPlatform.
 				break
 			}
 
