@@ -1,8 +1,8 @@
-package view
+package gcpinstall
 
 import "flightcrew.io/cli/internal/view/command"
 
-func NewInstallCommands() []*command.Model {
+func NewCommands() []*command.Model {
 	checkServiceAccount := command.NewReadModel(command.Opts{
 		Description: "Check if a Flightcrew service account already exists or needs to be created.",
 		Command:     `gcloud iam service-accounts describe --project="${GOOGLE_PROJECT_ID}" "${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" > /dev/null 2>&1`,

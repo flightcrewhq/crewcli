@@ -1,4 +1,4 @@
-package view
+package gcpinstall
 
 import (
 	"errors"
@@ -36,7 +36,7 @@ type Inputs struct {
 	defaultHelpText string
 }
 
-func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
+func NewInputs(params InstallParams, tempDir string) *Inputs {
 	if params.VirtualMachineName == "" {
 		params.VirtualMachineName = "flightcrew-control-tower"
 	}
@@ -51,19 +51,19 @@ func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 
 	is := &Inputs{
 		inputKeys: []string{
-			keyProject,
-			keyVirtualMachine,
-			keyAPIToken,
-			keyPlatform,
-			keyPermissions,
-			keyZone,
-			keyTowerVersion,
-			keyIAMServiceAccount,
+			KeyProject,
+			KeyVirtualMachine,
+			KeyAPIToken,
+			KeyPlatform,
+			KeyPermissions,
+			KeyZone,
+			KeyTowerVersion,
+			KeyIAMServiceAccount,
 		},
 		inputs: make(map[string]*wrapinput.Model),
 		args: map[string]string{
-			keyRPCHost:       "api.flightcrew.io",
-			keyTrafficRouter: "",
+			KeyRPCHost:       "api.flightcrew.io",
+			KeyTrafficRouter: "",
 		},
 		tempDir: tempDir,
 	}
@@ -74,7 +74,7 @@ func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 		var input wrapinput.Model
 
 		switch key {
-		case keyProject:
+		case KeyProject:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.CharLimit = 0
 			if len(params.ProjectName) > 0 {
@@ -88,7 +88,7 @@ func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 			input.HelpText = "Project ID is the unique string identifier for your Google Cloud Platform project."
 			input.Required = true
 
-		case keyVirtualMachine:
+		case KeyVirtualMachine:
 			input = wrapinput.NewFreeForm()
 			if params.VirtualMachineName != "" {
 				input.SetValue(params.VirtualMachineName)
@@ -100,7 +100,7 @@ func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 			input.Required = true
 			input.HelpText = "VM Name is what the (to be installed) Flightcrew virtual machine instance will be named."
 
-		case keyZone:
+		case KeyZone:
 			input = wrapinput.NewFreeForm()
 			if params.Zone != "" {
 				input.SetValue(params.Zone)
@@ -111,7 +111,7 @@ func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 			input.Default = "us-central"
 			input.HelpText = "Zone is the Google zone where the (to be installed) Flightcrew virtual machine instance will be located."
 
-		case keyTowerVersion:
+		case KeyTowerVersion:
 			input = wrapinput.NewFreeForm()
 			if params.TowerVersion != "" {
 				input.SetValue(params.TowerVersion)
@@ -120,7 +120,7 @@ func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 			input.Title = "Tower Version"
 			input.HelpText = "Tower Version is the version of the Tower image that will be installed. (recommended: `stable`)"
 
-		case keyAPIToken:
+		case KeyAPIToken:
 			input = wrapinput.NewFreeForm()
 			if len(params.Token) > 0 {
 				input.SetValue(params.Token)
@@ -130,14 +130,14 @@ func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 			input.Required = true
 			input.HelpText = "API token is the value provided by Flightcrew to identify your organization."
 
-		case keyIAMServiceAccount:
+		case KeyIAMServiceAccount:
 			input = wrapinput.NewFreeForm()
 			input.Title = "Service Account"
 			input.Default = "flightcrew-runner-test-chris"
 			input.SetValue("flightcrew-runner-test-chris")
 			input.HelpText = "Service Account is the name of the (to be created) IAM service account to run the Flightcrew Tower."
 
-		case keyPlatform:
+		case KeyPlatform:
 			input = wrapinput.NewRadio([]string{
 				constants.GoogleAppEngineStdDisplay,
 				constants.GoogleComputeEngineDisplay})
@@ -150,7 +150,7 @@ func NewInstallInputs(params gcp.InstallParams, tempDir string) *Inputs {
 				input.SetValue(params.PlatformDisplayName)
 			}
 
-		case keyPermissions:
+		case KeyPermissions:
 			input = wrapinput.NewRadio([]string{
 				constants.Read,
 				constants.Write})
@@ -234,7 +234,7 @@ func (is *Inputs) Validate() bool {
 		}
 
 		switch k {
-		case keyTowerVersion:
+		case KeyTowerVersion:
 			version, err := gcp.GetTowerImageVersion(val.Value())
 			if setError(err) {
 				debug.Output("convert tower version got error: %v", err)
@@ -244,7 +244,7 @@ func (is *Inputs) Validate() bool {
 			val.SetConverted(version)
 			debug.Output("convert tower version is %s", version)
 
-		case keyPlatform:
+		case KeyPlatform:
 			displayName := val.Value()
 			platform, ok := constants.DisplayToPlatform[displayName]
 			if !ok {
@@ -254,11 +254,11 @@ func (is *Inputs) Validate() bool {
 
 			val.SetConverted(platform)
 
-		case keyPermissions:
-			platformInput := is.inputs[keyPlatform]
+		case KeyPermissions:
+			platformInput := is.inputs[KeyPlatform]
 			platform, ok := constants.DisplayToPlatform[platformInput.Value()]
 			if !ok {
-				// Validation of this field occurs in keyPlatforis.
+				// Validation of this field occurs in KeyPlatforis.
 				break
 			}
 
@@ -288,12 +288,12 @@ func (is *Inputs) Validate() bool {
 			}
 
 			if permission == constants.Write {
-				is.args[keyTrafficRouter] = fmt.Sprintf(`
+				is.args[KeyTrafficRouter] = fmt.Sprintf(`
   --container-env=TRAFFIC_ROUTER=%s \`, platform)
 			}
-			is.args[keyIAMFile] = f.Name()
-			is.args[keyIAMRole] = permSettings.Role
-			is.args[keyImagePath] = gcp.ImagePath
+			is.args[KeyIAMFile] = f.Name()
+			is.args[KeyIAMRole] = permSettings.Role
+			is.args[KeyImagePath] = gcp.ImagePath
 			val.SetInfo(fmt.Sprintf("see %s", f.Name()))
 		}
 	}

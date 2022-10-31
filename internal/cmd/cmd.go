@@ -10,7 +10,7 @@ import (
 
 	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/gcp"
-	gcpview "flightcrew.io/cli/internal/gcp/view"
+	gcpinstall "flightcrew.io/cli/internal/gcp/install"
 	"flightcrew.io/cli/internal/view"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -115,7 +115,7 @@ var gcpInstallCmd = &cobra.Command{
 			return fmt.Errorf("init artifact registry: %w", err)
 		}
 
-		params := gcp.InstallParams{}
+		params := gcpinstall.InstallParams{}
 
 		params.ProjectName = *projectFlag
 		if len(params.ProjectName) == 0 {
@@ -149,8 +149,8 @@ var gcpInstallCmd = &cobra.Command{
 		}()
 
 		p := tea.NewProgram(view.NewInstallModel(
-			gcpview.NewInstallInputs(params, dir),
-			gcpview.NewInstallCommands))
+			gcpinstall.NewInputs(params, dir),
+			gcpinstall.NewCommands))
 		if err := p.Start(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
