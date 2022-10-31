@@ -6,9 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 
-	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/gcp"
 	gcpinstall "flightcrew.io/cli/internal/gcp/install"
 	"flightcrew.io/cli/internal/view"
@@ -16,21 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	// Declare the variables and then assign them in init() so that we don't have a cyclical dependency
-	// since the installCmd references these variables, but we need to first instantiate the flags.
-	tokenFlag, versionFlag, vmFlag, projectFlag, zoneFlag, platformFlag *string
-	writeFlag                                                           *bool
-)
-
 func init() {
-	tokenFlag = gcpInstallCmd.Flags().StringP("token", "t", "", "The Flightcrew API token to identify your organization.")
-	versionFlag = gcpInstallCmd.Flags().StringP("version", "v", "stable", "The Flightcrew image version to install.")
-	vmFlag = gcpInstallCmd.Flags().StringP("vm", "", "flightcrew-control-tower", "The name of the VM that will be created for the Flightcrew tower in your project.")
-	writeFlag = gcpInstallCmd.Flags().BoolP("write", "w", false, "Whether the Flightcrew tower should be readonly (true) or read-write (false).")
-	projectFlag = gcpInstallCmd.Flags().StringP("project", "p", "", "specify your Google Cloud Platform project name")
-	zoneFlag = gcpInstallCmd.Flags().StringP("zone", "l", "us-central", "The zone to put your Tower in.")
-	platformFlag = gcpInstallCmd.Flags().StringP("platform", "c", "gae_std", "specify what type of resources you want to manage. (gae_std, gce)")
+	gcpinstall.RegisterFlags(gcpInstallCmd)
 }
 
 // Do runs the command logic.
@@ -68,6 +53,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number for Flightcrew's CLI",
 	Run: func(cmd *cobra.Command, args []string) {
+		// TODO(chris)
 		//	if debug.Traced {
 		//		defer trace.StartRegion(cmd.Context(), "version").End()
 		//	}
@@ -115,41 +101,14 @@ var gcpInstallCmd = &cobra.Command{
 			return fmt.Errorf("init artifact registry: %w", err)
 		}
 
-		params := gcpinstall.InstallParams{}
-
-		params.ProjectName = *projectFlag
-		if len(params.ProjectName) == 0 {
-			if projects, err := gcp.GetProjectsFromEnvironment(); err == nil {
-				params.ProjectName = strings.Join(projects, ",")
-			}
-		}
-		params.Zone = *zoneFlag
-		params.TowerVersion = *versionFlag
-		params.Token = *tokenFlag
-		params.Write = *writeFlag
-		params.VirtualMachineName = *vmFlag
-
-		displayName, ok := constants.KeyToDisplay[*platformFlag]
-		if !ok {
-			desired := make([]string, 0, len(constants.KeyToDisplay))
-			for k := range constants.KeyToDisplay {
-				desired = append(desired, k)
-			}
-			return fmt.Errorf("invalid --platform flag: %s", strings.Join(desired, ", "))
-		}
-
-		params.PlatformDisplayName = displayName
-
-		dir, err := os.MkdirTemp("", "flightcrew-install-*")
+		env, cleanup, err := gcpinstall.ParseFlags(cmd)
 		if err != nil {
-			return fmt.Errorf("create temp dir for installation: %v", err)
+			return err
 		}
-		defer func() {
-			err = os.RemoveAll(dir)
-		}()
+		defer cleanup()
 
 		p := tea.NewProgram(view.NewInstallModel(
-			gcpinstall.NewInputs(params, dir),
+			gcpinstall.NewInputs(env),
 			gcpinstall.NewCommands))
 		if err := p.Start(); err != nil {
 			fmt.Println(err)
