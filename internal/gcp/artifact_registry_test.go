@@ -29,6 +29,12 @@ func TestGetDesiredImageVersion(mainT *testing.T) {
 				"12.1.1351-test-not-stable",
 			},
 		},
+		{
+			Name: "blabblab",
+			Tags: []string{
+				"labeled",
+			},
+		},
 	}
 
 	mainT.Run("no existing version in numbered format should fail", func(t *testing.T) {
@@ -51,5 +57,16 @@ func TestGetDesiredImageVersion(mainT *testing.T) {
 		version, err := getDesiredImageVersion(images, "latest")
 		assert.NoError(t, err)
 		assert.Equal(t, "12.2.123", version)
+	})
+
+	mainT.Run("get exact tag should get exact tag", func(t *testing.T) {
+		version, err := getDesiredImageVersion(images, "12.2.123")
+		assert.NoError(t, err)
+		assert.Equal(t, "12.2.123", version)
+	})
+
+	mainT.Run("get image with no version label fails", func(t *testing.T) {
+		_, err := getDesiredImageVersion(images, "labeled")
+		assert.Error(t, err)
 	})
 }

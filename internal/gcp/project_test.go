@@ -25,6 +25,12 @@ yeah
 		}, projects)
 	})
 
+	mainT.Run("parse empty csv should fail", func(t *testing.T) {
+		buf := bytes.NewBufferString("")
+		_, err := parseListProjectsCSV(buf)
+		assert.Error(t, err)
+	})
+
 	mainT.Run("parse valid empty csv should succeed", func(t *testing.T) {
 		buf := bytes.NewBufferString(`project_id
 `)
