@@ -35,6 +35,7 @@ const (
 	keyTempDir            = "${TEMP_DIR}"
 	keyGAEMaxVersionCount = "${GAE_MAX_VERSION_COUNT}"
 	keyGAEMaxVersionAge   = "${GAE_MAX_VERSION_AGE}"
+	keyGCELabel           = "${GCE_LABEL}"
 )
 
 var (

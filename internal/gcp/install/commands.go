@@ -73,7 +73,7 @@ https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 	--container-image="${IMAGE_PATH}:${TOWER_VERSION}" \
 	--container-arg="--debug=true" \
 	--container-env="FC_API_KEY=${API_TOKEN}" \
-	--container-env=CLOUD_PLATFORM=${PLATFORM} \${TRAFFIC_ROUTER}${GAE_MAX_VERSION_COUNT}${GAE_MAX_VERSION_AGE}
+	--container-env=CLOUD_PLATFORM=${PLATFORM} \${TRAFFIC_ROUTER}${GAE_MAX_VERSION_COUNT}${GAE_MAX_VERSION_AGE}${GCE_LABEL}
 	--container-env=FC_PACKAGE_VERSION=${TOWER_VERSION} \
 	--container-env=METRIC_PROVIDERS=stackdriver \
 	--container-env=FC_RPC_CONNECT_HOST=${RPC_HOST} \

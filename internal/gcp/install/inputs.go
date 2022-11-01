@@ -99,6 +99,7 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	inputs.args[keyTrafficRouter] = ""
 	inputs.args[keyGAEMaxVersionAge] = ""
 	inputs.args[keyGAEMaxVersionCount] = ""
+	inputs.args[keyGCELabel] = ""
 	inputs.args[keyImagePath] = gcp.ImagePath
 
 	var maxTitleLength int
@@ -290,6 +291,13 @@ func (inputs *Inputs) Validate() bool {
 				break
 			}
 
+			if platform == constants.GoogleComputeEnginePlatform {
+				inputs.args[keyGCELabel] = `
+	--label=component=flightcrew \`
+			} else {
+				inputs.args[keyGCELabel] = ""
+			}
+
 			input.SetConverted(platform)
 
 		case keyPermissions:
@@ -328,6 +336,8 @@ func (inputs *Inputs) Validate() bool {
 			if permission == constants.Write {
 				inputs.args[keyTrafficRouter] = fmt.Sprintf(`
 	--container-env=TRAFFIC_ROUTER=%s \`, platform)
+			} else {
+				inputs.args[keyTrafficRouter] = ""
 			}
 			inputs.args[keyIAMFile] = f.Name()
 			inputs.args[keyIAMRole] = permSettings.Role
