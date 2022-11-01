@@ -3,7 +3,6 @@ package view
 import (
 	"strings"
 
-	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/style"
 	"flightcrew.io/cli/internal/view/button"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -35,11 +34,11 @@ type inputsModel struct {
 	width  int
 	height int
 
-	// TODO: Move the GCP stuff into a separate place. Probably group this entire block and turn it into its own model?
-	inputs     Inputs
-	index      int
-	hasErrors  bool
-	confirming bool
+	description string
+	inputs      Inputs
+	index       int
+	hasErrors   bool
+	confirming  bool
 
 	submitButton     *button.Button
 	confirmYesButton *button.Button
@@ -51,8 +50,6 @@ type inputsModel struct {
 }
 
 func NewInputsModel(inputs Inputs, getCommands LazyCommands) inputsModel {
-	debug.Output("new install model!")
-
 	m := inputsModel{
 		inputs:        inputs,
 		getCommands:   getCommands,
@@ -178,12 +175,6 @@ func (m inputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m inputsModel) View() string {
 	var b strings.Builder
-	// TODO This should be instantiated by the command
-	desc, _ := style.Glamour.Render(`## Welcome!
-
-This is the Flightcrew installation CLI! To get started, please fill in the information below.`)
-
-	b.WriteString(desc)
 	b.WriteString(m.inputs.View())
 	b.WriteString("\n\n")
 
@@ -199,8 +190,6 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 
 	b.WriteString("\n\n")
 
-	b.WriteString(style.Required("*"))
-	b.WriteString(" - required\n\n")
 	b.WriteString(style.Help("ctrl+c/esc: quit • ←/→/↑/↓: nav • enter: proceed"))
 
 	if len(m.logStatements) > 0 {
@@ -212,5 +201,4 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	}
 
 	return b.String()
-	// return wordwrap.String(b.String(), m.width)
 }

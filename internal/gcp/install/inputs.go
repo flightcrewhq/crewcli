@@ -53,12 +53,14 @@ var (
 type Inputs struct {
 	tempDir string
 
-	inputKeys       []string
-	inputs          map[string]*wrapinput.Model
-	index           int
-	args            map[string]string
-	confirming      bool
-	defaultHelpText string
+	inputKeys        []string
+	inputs           map[string]*wrapinput.Model
+	index            int
+	args             map[string]string
+	confirming       bool
+	defaultHelpText  string
+	description      string
+	requiredHelpText string
 }
 
 func NewInputs(params Params) *Inputs {
@@ -68,6 +70,10 @@ func NewInputs(params Params) *Inputs {
 		args:      params.args,
 		tempDir:   params.tempDir,
 	}
+
+	inputs.description, _ = style.Glamour.Render(`## Welcome!
+
+This is the Flightcrew installation CLI! To get started, please fill in the information below.`)
 
 	if !contains(inputs.args, keyVirtualMachine) {
 		inputs.args[keyVirtualMachine] = "flightcrew-control-tower"
@@ -211,6 +217,8 @@ func NewInputs(params Params) *Inputs {
 	for k := range inputs.inputs {
 		inputs.inputs[k].Title = renderTitle(inputs.inputs[k].Title)
 	}
+
+	inputs.requiredHelpText = renderTitle(style.Required("*")) + style.HelpColor.Render(" - required\n")
 
 	return inputs
 }
@@ -364,13 +372,18 @@ func (inputs *Inputs) Args() map[string]string {
 	return inputs.args
 }
 
-func (inputs *Inputs) View() string {
+func (inputs Inputs) View() string {
 	var b strings.Builder
+	b.WriteString(inputs.description)
 	for _, k := range inputs.inputKeys {
 		b.WriteString(inputs.inputs[k].View(wrapinput.ViewParams{
 			ShowValue: inputs.confirming,
 		}))
 		b.WriteRune('\n')
+	}
+
+	if !inputs.confirming {
+		b.WriteString(inputs.requiredHelpText)
 	}
 
 	if inputs.index < len(inputs.inputKeys) {

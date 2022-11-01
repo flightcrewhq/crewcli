@@ -8,17 +8,18 @@ import (
 const defaultWidth = 85
 
 var (
-	Focused = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Bold(true)
-	Blurred = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	None    = lipgloss.NewStyle()
-	Code    = lipgloss.NewStyle().Foreground(lipgloss.Color("#8CA5D8"))
-	Error   = lipgloss.NewStyle().Foreground(lipgloss.Color("#D88CA5")).Bold(true).Render
-	Success = lipgloss.NewStyle().Foreground(lipgloss.Color("#8CD8B2")).Bold(true).Render
-	Bold    = lipgloss.NewStyle().Bold(true).Render
-	Help    = lipgloss.NewStyle().AlignHorizontal(lipgloss.Center).PaddingTop(1).Width(defaultWidth).Foreground(lipgloss.AdaptiveColor{
+	Focused   = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Bold(true)
+	Blurred   = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	None      = lipgloss.NewStyle()
+	Code      = lipgloss.NewStyle().Foreground(lipgloss.Color("#8CA5D8"))
+	Error     = lipgloss.NewStyle().Foreground(lipgloss.Color("#D88CA5")).Bold(true).Render
+	Success   = lipgloss.NewStyle().Foreground(lipgloss.Color("#8CD8B2")).Bold(true).Render
+	Bold      = lipgloss.NewStyle().Bold(true).Render
+	HelpColor = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
 		Light: "#737675",
 		Dark:  "240",
-	}).Render
+	})
+	Help      = HelpColor.Copy().AlignHorizontal(lipgloss.Center).PaddingTop(1).Width(defaultWidth).Render
 	Action    = lipgloss.NewStyle().Foreground(lipgloss.Color("#BF7EFF")).Bold(true).Render
 	Required  = lipgloss.NewStyle().Foreground(lipgloss.Color("199")).Render
 	Highlight = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{

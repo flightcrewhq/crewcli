@@ -108,7 +108,6 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "enter":
 				if cmd.State() == command.PromptState && !m.userInput {
-					// TODO: Confirm quitting
 					return m, tea.Quit
 				}
 
