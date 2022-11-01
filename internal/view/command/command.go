@@ -125,7 +125,7 @@ func (m *Model) Prompt() {
 	m.state = PromptState
 }
 
-func (m *Model) ShouldRun() bool {
+func (m *Model) ShouldPrompt() bool {
 	if m.IsRead() {
 		bashCommand := sanitizeForExec(m.opts.Command)
 		c := exec.Command("bash", "-c", bashCommand) //nolint:gosec

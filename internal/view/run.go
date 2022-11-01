@@ -198,7 +198,7 @@ func (m *runModel) nextCommand() bool {
 			continue
 		}
 
-		if current.ShouldRun() {
+		if current.ShouldPrompt() {
 			return true
 		}
 	}
