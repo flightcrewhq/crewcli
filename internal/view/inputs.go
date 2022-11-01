@@ -14,6 +14,12 @@ import (
 // pre-defined defaults that can be modified according to cloud providers' specific
 // requirements.
 type Inputs interface {
+	// Name returns the name of the flow (e.g. gcp-install) and should be safe to write into
+	// a file name.
+	Name() string
+	// The description for when we reach the end screen.
+	EndDescription() string
+
 	// Len returns the number of inputs in this grouping. The caller will assume that there are
 	// Len() number of inputs, so any index outside of [0, len) will be used for keeping state
 	// in the caller.
@@ -35,11 +41,12 @@ type Inputs interface {
 	// should be resilient to array out of bound.
 	Focus(i int) tea.Cmd
 
-	// Args should return the a map from key (managed by the implementer) to value for
-	// variables that should be replaced in the Commands below. Take care to create
-	// keys that will not be prefixes to commonly occurring words.
+	// FinalizeArgs is called when the inputs gathering step has been completed. This is the chance
+	// for the implementation to convert or move any values around. Commands() will be called to get
+	// the commands to run, so the implementer should handle when to replace variables in the
+	// commands.
 	// e.g. Defining $PRE and $PREFIX may cause unexpected results.
-	Args() map[string]string
+	FinalizeArgs()
 	// Commands should return the list of commands that should be run after the inputs
 	// have been confirmed. Commands and descriptions will be updated with the input
 	// values based on the keys that are provided by the implementation. The run model will
@@ -111,6 +118,7 @@ func (m inputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, nil
 					}
 
+					m.inputs.FinalizeArgs()
 					return NewRunModel(m.inputs), nil
 				}
 

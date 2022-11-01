@@ -51,6 +51,7 @@ func init() {
 		glamour.WithAutoStyle(),
 		// wrap output at specific width
 		glamour.WithWordWrap(defaultWidth),
+		glamour.WithEmoji(),
 	)
 
 	if err != nil {

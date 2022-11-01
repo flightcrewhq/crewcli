@@ -43,17 +43,6 @@ func NewRunModel(inputs Inputs) *runModel {
 		noButton:  noButton,
 	}
 
-	args := inputs.Args()
-	replaceArgs := make([]string, 0, 2*len(args))
-	for key, arg := range args {
-		replaceArgs = append(replaceArgs, key, arg)
-	}
-	replacer := strings.NewReplacer(replaceArgs...)
-
-	for i := range m.commands {
-		m.commands[i].Replace(replacer)
-	}
-
 	p := paginator.New()
 	p.Type = paginator.Dots
 	p.PerPage = 1

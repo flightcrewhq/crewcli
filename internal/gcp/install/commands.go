@@ -96,6 +96,10 @@ https://serverfault.com/questions/980569/disable-fluentd-on-on-container-optimiz
 		}),
 	}
 
+	for _, cmd := range commands {
+		cmd.Replace(inputs.replacer)
+	}
 	inputs.commands = commands
+
 	return commands
 }

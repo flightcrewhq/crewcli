@@ -58,10 +58,13 @@ type Inputs struct {
 	inputs           map[string]*wrapinput.Model
 	index            int
 	args             map[string]string
+	replacer         *strings.Replacer
 	confirming       bool
 	defaultHelpText  string
 	description      string
 	requiredHelpText string
+	name             string
+	endDescription   string
 
 	commands []*command.Model
 }
@@ -72,6 +75,7 @@ func NewInputs(params Params) *Inputs {
 		inputs:    make(map[string]*wrapinput.Model),
 		args:      params.args,
 		tempDir:   params.tempDir,
+		name:      "gcp-install",
 	}
 
 	inputs.description, _ = style.Glamour.Render(`## Welcome!
@@ -87,7 +91,7 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	if !contains(inputs.args, keyTowerVersion) {
 		inputs.args[keyTowerVersion] = "stable"
 	}
-	inputs.args[keyRPCHost] = "api.flightcrew.io"
+	inputs.args[keyRPCHost] = gcp.GetAPIHostName("", "")
 	inputs.args[keyTrafficRouter] = ""
 	inputs.args[keyGAEMaxVersionAge] = ""
 	inputs.args[keyGAEMaxVersionCount] = ""
@@ -268,6 +272,10 @@ func (inputs *Inputs) Validate() bool {
 			input.SetConverted(version)
 			debug.Output("convert tower version is %s", version)
 
+		case keyVirtualMachine:
+			projectInput := inputs.inputs[keyProject]
+			inputs.args[keyRPCHost] = gcp.GetAPIHostName(projectInput.Value(), input.Value())
+
 		case keyPlatform:
 			displayName := input.Value()
 			platform, ok := constants.DisplayToPlatform[displayName]
@@ -368,11 +376,20 @@ func (inputs *Inputs) Validate() bool {
 
 var convertDuration = timeconv.GetDurationFormatter([]string{"h", "m", "s"})
 
-func (inputs *Inputs) Args() map[string]string {
+func (inputs Inputs) Name() string {
+	return inputs.name
+}
+
+func (inputs *Inputs) FinalizeArgs() {
 	for _, k := range inputs.inputKeys {
 		inputs.args[k] = inputs.inputs[k].Value()
 	}
-	return inputs.args
+
+	replaceArgs := make([]string, 0, 2*len(inputs.args))
+	for key, arg := range inputs.args {
+		replaceArgs = append(replaceArgs, key, arg)
+	}
+	inputs.replacer = strings.NewReplacer(replaceArgs...)
 }
 
 func (inputs Inputs) View() string {
@@ -456,4 +473,32 @@ func (inputs *Inputs) updateInputKeys() {
 	} else {
 		inputs.inputKeys = initialInputKeys
 	}
+}
+
+func (inputs Inputs) EndDescription() string {
+	if len(inputs.endDescription) > 0 {
+		return inputs.endDescription
+	}
+
+	var description = `## 🕊 Welcome to Flightcrew!
+
+GCE takes a couple of minutes to start up the VM.
+
+See your VM in the console: https://console.cloud.google.com/compute/instancesDetail/zones/${ZONE}/instances/${VIRTUAL_MACHINE}?project=${GOOGLE_PROJECT_ID}
+
+Alternatively, see your new VM in action:
+${CODE_START}
+# SSH into the created VM.
+gcloud compute ssh ${VIRTUAL_MACHINE} --project ${GOOGLE_PROJECT_ID} --zone ${ZONE}
+# Follow the new container's logs.
+docker logs --follow \$(docker ps -f name=tower --format=\"{{.ID}}\")
+${CODE_END}
+`
+
+	description = inputs.replacer.Replace(description)
+	description = strings.Replace(description, "${CODE_START}", "```sh", -1)
+	description = strings.Replace(description, "${CODE_END}", "```", -1)
+
+	out, _ := style.Glamour.Render(description)
+	return out
 }
