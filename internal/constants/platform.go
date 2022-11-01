@@ -27,6 +27,7 @@ var (
 		GoogleAppEngineStdDisplay:  GoogleAppEngineStdPlatform,
 		GoogleComputeEngineDisplay: GoogleComputeEnginePlatform,
 	}
+	// TODO: Use a local file or get from a URL that the user provides.
 	PlatformPermissions = map[string]map[string]*Permissions{
 		GoogleAppEngineStdPlatform: {
 			Read: &Permissions{
