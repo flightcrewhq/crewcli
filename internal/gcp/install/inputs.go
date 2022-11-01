@@ -12,6 +12,7 @@ import (
 	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/style"
 	"flightcrew.io/cli/internal/timeconv"
+	"flightcrew.io/cli/internal/view/command"
 	"flightcrew.io/cli/internal/view/wrapinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -61,6 +62,8 @@ type Inputs struct {
 	defaultHelpText  string
 	description      string
 	requiredHelpText string
+
+	commands []*command.Model
 }
 
 func NewInputs(params Params) *Inputs {
@@ -88,6 +91,7 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	inputs.args[keyTrafficRouter] = ""
 	inputs.args[keyGAEMaxVersionAge] = ""
 	inputs.args[keyGAEMaxVersionCount] = ""
+	inputs.args[keyImagePath] = gcp.ImagePath
 
 	var maxTitleLength int
 
@@ -313,7 +317,6 @@ func (inputs *Inputs) Validate() bool {
 			}
 			inputs.args[keyIAMFile] = f.Name()
 			inputs.args[keyIAMRole] = permSettings.Role
-			inputs.args[keyImagePath] = gcp.ImagePath
 			input.SetInfo(fmt.Sprintf("see %s", f.Name()))
 
 		case keyGAEMaxVersionCount:

@@ -42,7 +42,8 @@ type Inputs interface {
 	Args() map[string]string
 	// Commands should return the list of commands that should be run after the inputs
 	// have been confirmed. Commands and descriptions will be updated with the input
-	// values based on the keys that are provided by the implementation.
+	// values based on the keys that are provided by the implementation. The run model will
+	// use and modify the same slice, so the implementation will be able to share the state.
 	Commands() []*command.Model
 }
 
@@ -59,15 +60,12 @@ type inputsModel struct {
 	confirmYesButton *button.Button
 	confirmNoButton  *button.Button
 
-	getCommands LazyCommands
-
 	logStatements []string
 }
 
-func NewInputsModel(inputs Inputs, getCommands LazyCommands) inputsModel {
+func NewInputsModel(inputs Inputs) inputsModel {
 	m := inputsModel{
 		inputs:        inputs,
-		getCommands:   getCommands,
 		logStatements: make([]string, 0),
 	}
 
@@ -113,7 +111,7 @@ func (m inputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, nil
 					}
 
-					return NewRunModel(m.inputs.Args(), m.getCommands), nil
+					return NewRunModel(m.inputs), nil
 				}
 
 				if m.index == m.inputs.Len()+1 {

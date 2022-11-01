@@ -2,7 +2,11 @@ package gcpinstall
 
 import "flightcrew.io/cli/internal/view/command"
 
-func NewCommands() []*command.Model {
+func (inputs *Inputs) Commands() []*command.Model {
+	if inputs.commands != nil {
+		return inputs.commands
+	}
+
 	checkServiceAccount := command.NewReadModel(command.Opts{
 		Description: "Check if a Flightcrew service account already exists or needs to be created.",
 		Command:     `gcloud iam service-accounts describe --project="${GOOGLE_PROJECT_ID}" "${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" > /dev/null 2>&1`,
@@ -28,7 +32,7 @@ func NewCommands() []*command.Model {
 		},
 	})
 
-	return []*command.Model{
+	commands := []*command.Model{
 		checkServiceAccount,
 		command.NewWriteModel(command.Opts{
 			SkipIfSucceed: checkServiceAccount,
@@ -91,4 +95,7 @@ https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 https://serverfault.com/questions/980569/disable-fluentd-on-on-container-optimized-os-gce`,
 		}),
 	}
+
+	inputs.commands = commands
+	return commands
 }

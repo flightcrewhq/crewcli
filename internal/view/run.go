@@ -12,15 +12,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-type LazyCommands func() []*command.Model
-
 type cmdFinishedErr struct {
 	err error
 }
 
 type runModel struct {
-	params    map[string]string
 	paginator paginator.Model
+	inputs    Inputs
 
 	commands     []*command.Model
 	currentIndex int
@@ -32,22 +30,23 @@ type runModel struct {
 	quitting bool
 }
 
-func NewRunModel(params map[string]string, getCommands LazyCommands) *runModel {
+func NewRunModel(inputs Inputs) *runModel {
 	debug.Output("New run model time!")
 
 	yesButton, _ := button.New("yes", 10)
 	noButton, _ := button.New("no", 10)
 
 	m := &runModel{
-		params:    params,
-		commands:  getCommands(),
+		inputs:    inputs,
+		commands:  inputs.Commands(),
 		yesButton: yesButton,
 		noButton:  noButton,
 	}
 
-	replaceArgs := make([]string, 0, 2*len(params))
-	for key, param := range params {
-		replaceArgs = append(replaceArgs, key, param)
+	args := inputs.Args()
+	replaceArgs := make([]string, 0, 2*len(args))
+	for key, arg := range args {
+		replaceArgs = append(replaceArgs, key, arg)
 	}
 	replacer := strings.NewReplacer(replaceArgs...)
 
