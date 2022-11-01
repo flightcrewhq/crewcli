@@ -137,7 +137,7 @@ func (m *Model) Prompt() {
 
 func (m *Model) ShouldRun() bool {
 	if m.IsRead() {
-		c := exec.Command("bash", "-c", SanitizeForExec(m.opts.Command)) //nolint:gosec
+		c := exec.Command("bash", "-c", sanitizeForExec(m.opts.Command)) //nolint:gosec
 		err := c.Run()
 		m.Complete(err == nil)
 		return false

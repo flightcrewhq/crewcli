@@ -17,7 +17,7 @@ type wrappedCommand struct {
 }
 
 func newWrappedCommand(m *Model) *wrappedCommand {
-	c := exec.Command("bash", "-c", SanitizeForExec(m.opts.Command))
+	c := exec.Command("bash", "-c", sanitizeForExec(m.opts.Command))
 	return &wrappedCommand{
 		cmd:   c,
 		model: m,
@@ -44,12 +44,12 @@ func (wc *wrappedCommand) SetStderr(w io.Writer) {
 
 var (
 	cmdReplacer = strings.NewReplacer(
-		`\`, "",
+		`\\n`, "",
 		"\n", "",
 		"\t", " ",
 	)
 )
 
-func SanitizeForExec(cmd string) string {
+func sanitizeForExec(cmd string) string {
 	return cmdReplacer.Replace(cmd)
 }

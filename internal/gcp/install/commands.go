@@ -86,6 +86,7 @@ https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 	--zone=${ZONE}`,
 		}),
 		command.NewWriteModel(command.Opts{
+			SkipIfSucceed: checkVMExists,
 			Command: `gcloud compute instances add-metadata ${VIRTUAL_MACHINE} \
 	--project=${GOOGLE_PROJECT_ID} \
 	--zone=${ZONE}  \

@@ -128,21 +128,14 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd := m.commands[m.currentIndex]
 			cmd.Complete(msg.err == nil)
 			return m, nil
-			// TODO if we're at the end --> go to another screen
-
 		}
 		return m, nil
 
 	case command.PassState:
 		switch msg.(type) {
 		case tea.KeyMsg:
-			if m.quitting {
-				return m, tea.Quit
-			}
-
 			if !m.nextCommand() {
-				m.quitting = true
-				return m, nil
+				return NewEndModel(m.inputs), nil
 			}
 
 			return m, nil
@@ -161,9 +154,6 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *runModel) View() string {
 	var b strings.Builder
 	cmd := m.commands[m.paginator.Page]
-	b.WriteString("State is currently: ")
-	b.WriteString(string(cmd.State()))
-	b.WriteRune('\n')
 	b.WriteRune('\n')
 
 	b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render(m.paginator.View()))

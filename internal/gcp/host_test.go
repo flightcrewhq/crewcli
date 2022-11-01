@@ -8,8 +8,8 @@ import (
 )
 
 func TestGetAPIHostName(t *testing.T) {
-	assert.Equal(t, "api.flightcrew.io", gcp.GetAPIHostName("", ""))
-	assert.Equal(t, "api.flightcrew.io", gcp.GetAPIHostName("", "something-dev"))
-	assert.Equal(t, "api.flightcrew.io", gcp.GetAPIHostName("some-project", "something-dev"))
-	assert.Equal(t, "api.flightcrew.io", gcp.GetAPIHostName("yay-yay-yay", "something-dev"))
+	assert.Equal(t, "flightcrew.io", gcp.GetHostBaseURL("", ""))
+	assert.Equal(t, "flightcrew.io", gcp.GetHostBaseURL("", "something-dev"))
+	assert.Equal(t, "flightcrew.io", gcp.GetHostBaseURL("some-project", "something-dev"))
+	assert.Equal(t, "flightcrew.io", gcp.GetHostBaseURL("yay-yay-yay", "something-dev"))
 }

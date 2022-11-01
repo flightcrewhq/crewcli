@@ -86,12 +86,15 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 		inputs.args[keyVirtualMachine] = "flightcrew-control-tower"
 	}
 	if !contains(inputs.args, keyZone) {
-		inputs.args[keyZone] = "us-central"
+		inputs.args[keyZone] = "us-central1-c"
 	}
 	if !contains(inputs.args, keyTowerVersion) {
 		inputs.args[keyTowerVersion] = "stable"
 	}
-	inputs.args[keyRPCHost] = gcp.GetAPIHostName("", "")
+
+	baseURL := gcp.GetHostBaseURL("", "")
+	inputs.args[keyAppURL] = constants.GetAppHostName(baseURL)
+	inputs.args[keyRPCHost] = constants.GetAPIHostName(baseURL)
 	inputs.args[keyTrafficRouter] = ""
 	inputs.args[keyGAEMaxVersionAge] = ""
 	inputs.args[keyGAEMaxVersionCount] = ""
@@ -274,7 +277,9 @@ func (inputs *Inputs) Validate() bool {
 
 		case keyVirtualMachine:
 			projectInput := inputs.inputs[keyProject]
-			inputs.args[keyRPCHost] = gcp.GetAPIHostName(projectInput.Value(), input.Value())
+			baseURL := gcp.GetHostBaseURL(projectInput.Value(), input.Value())
+			inputs.args[keyRPCHost] = constants.GetAPIHostName(baseURL)
+			inputs.args[keyAppURL] = constants.GetAppHostName(baseURL)
 
 		case keyPlatform:
 			displayName := input.Value()
@@ -473,32 +478,4 @@ func (inputs *Inputs) updateInputKeys() {
 	} else {
 		inputs.inputKeys = initialInputKeys
 	}
-}
-
-func (inputs Inputs) EndDescription() string {
-	if len(inputs.endDescription) > 0 {
-		return inputs.endDescription
-	}
-
-	var description = `## 🕊 Welcome to Flightcrew!
-
-GCE takes a couple of minutes to start up the VM.
-
-See your VM in the console: https://console.cloud.google.com/compute/instancesDetail/zones/${ZONE}/instances/${VIRTUAL_MACHINE}?project=${GOOGLE_PROJECT_ID}
-
-Alternatively, see your new VM in action:
-${CODE_START}
-# SSH into the created VM.
-gcloud compute ssh ${VIRTUAL_MACHINE} --project ${GOOGLE_PROJECT_ID} --zone ${ZONE}
-# Follow the new container's logs.
-docker logs --follow \$(docker ps -f name=tower --format=\"{{.ID}}\")
-${CODE_END}
-`
-
-	description = inputs.replacer.Replace(description)
-	description = strings.Replace(description, "${CODE_START}", "```sh", -1)
-	description = strings.Replace(description, "${CODE_END}", "```", -1)
-
-	out, _ := style.Glamour.Render(description)
-	return out
 }

@@ -5,27 +5,26 @@ import (
 	"encoding/hex"
 	"strings"
 
+	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/debug"
 )
 
 const (
-	prodHostName      = "api.flightcrew.io"
-	devHostName       = "api.flightcrew.dev"
 	devProjectMD5Hash = "fab25c5e9d4d70830074eff996da8ba4"
 )
 
-func GetAPIHostName(projectID string, towerName string) string {
+func GetHostBaseURL(projectID string, towerName string) string {
 	if !strings.Contains(towerName, "dev") {
-		return prodHostName
+		return constants.ProdBaseURL
 	}
 
 	hash := getMD5Hash(projectID)
 	debug.Output("hash is %s", hash)
 	if hash == devProjectMD5Hash {
-		return devHostName
+		return constants.DevBaseURL
 	}
 
-	return prodHostName
+	return constants.ProdBaseURL
 }
 
 func getMD5Hash(text string) string {

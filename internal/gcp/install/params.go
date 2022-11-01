@@ -28,6 +28,7 @@ const (
 	keyIAMFile            = "${IAM_FILE}"
 	keyPermissions        = "${PERMISSIONS}"
 	keyRPCHost            = "${RPC_HOST}"
+	keyAppURL             = "${APP_URL}"
 	keyPlatform           = "${PLATFORM}"
 	keyTrafficRouter      = "${TRAFFIC_ROUTER}"
 	keyImagePath          = "${IMAGE_PATH}"
@@ -62,7 +63,7 @@ func RegisterFlags(cmd *cobra.Command) {
 	vmFlag = cmd.Flags().StringP("vm", "", "flightcrew-control-tower", "The name of the VM that will be created for the Flightcrew tower in your project.")
 	writeFlag = cmd.Flags().BoolP("write", "w", false, "Whether the Flightcrew tower should be readonly (true) or read-write (false).")
 	projectFlag = cmd.Flags().StringP("project", "p", "", "specify your Google Cloud Platform project name")
-	zoneFlag = cmd.Flags().StringP("zone", "l", "us-central", "The zone to put your Tower in.")
+	zoneFlag = cmd.Flags().StringP("zone", "l", "us-central1-c", "The zone to put your Tower in.")
 	platformFlag = cmd.Flags().StringP("platform", "c", "gae_std", "specify what type of params.argsources you want to manage. (gae_std, gce)")
 }
 

@@ -49,8 +49,6 @@ func init() {
 	Glamour, err = glamour.NewTermRenderer(
 		// detect background color and pick either the default dark or light theme
 		glamour.WithAutoStyle(),
-		// wrap output at specific width
-		glamour.WithWordWrap(defaultWidth),
 		glamour.WithEmoji(),
 	)
 
