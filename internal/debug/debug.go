@@ -3,6 +3,7 @@ package debug
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 var (
@@ -13,35 +14,39 @@ type logWriter struct {
 	w *os.File
 }
 
-func init() {
-	fn := "tmp/debug.log"
-	if err := os.MkdirAll("tmp", 0755); err != nil {
-		panic(err)
+func Enable(fn string) (func(), error) {
+	if err := os.MkdirAll(filepath.Base(fn), 0755); err != nil {
+		return nil, err
 	}
 
 	if _, err := os.Stat(fn); err == nil {
 		if err := os.Remove(fn); err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 
 	f, err := os.Create(fn)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	f.WriteString("Hello\n")
 	f.Sync()
 
 	logger = &logWriter{
 		w: f,
 	}
+
+	return func() {
+		f.Close()
+	}, nil
 }
 
 func Output(detail string, args ...interface{}) {
+	if logger == nil {
+		return
+	}
+
 	str := fmt.Sprintf(detail+"\n", args...)
 	logger.w.WriteString(str)
-	if err := logger.w.Sync(); err != nil {
-		panic(err)
-	}
+	logger.w.Sync()
 }

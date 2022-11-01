@@ -61,23 +61,10 @@ func (m Model) viewTagline(b *strings.Builder) {
 }
 
 func (m Model) viewOutput(b *strings.Builder) {
-	var addNewline bool
-	if len(m.output.Stdout) > 0 {
-		b.WriteString(headerStdout)
+	if len(m.output.Log) > 0 {
+		b.WriteString(headerOutput)
 		b.WriteRune('\n')
-		b.WriteString(m.output.Stdout)
-		b.WriteRune('\n')
-		addNewline = true
-	}
-
-	if len(m.output.Stderr) > 0 {
-		if addNewline {
-			b.WriteRune('\n')
-			addNewline = false
-		}
-		b.WriteString(headerStderr)
-		b.WriteRune('\n')
-		b.WriteString(m.output.Stderr)
+		b.WriteString(m.output.Log)
 		b.WriteRune('\n')
 	}
 }

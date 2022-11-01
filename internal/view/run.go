@@ -66,6 +66,10 @@ func (m *runModel) Init() tea.Cmd {
 }
 
 func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.currentIndex >= len(m.commands) {
+		return m, tea.Quit
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -100,6 +104,7 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				if cmd.State() == command.PromptState && m.userInput {
+					m.userInput = false
 					return m, tea.Exec(cmd.GetCommandToRun(), func(err error) tea.Msg {
 						return cmdFinishedErr{err}
 					})
@@ -175,6 +180,8 @@ func (m *runModel) View() string {
 		b.WriteString(style.Help("(press any key to quit)"))
 	} else if cmd.State() == command.PassState {
 		b.WriteString(style.Help("(press any key to continue)"))
+	} else if cmd.State() == command.SkipState {
+		b.WriteString(style.Help("(nothing to do, press any key to quit)"))
 	} else {
 		b.WriteString(style.Help("ctrl+c/esc: quit • h/l: page • ←/→/enter: run command"))
 	}

@@ -1,29 +1,24 @@
 package command
 
 import (
+	"bytes"
 	"os/exec"
 	"strings"
 
+	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/style"
 	"github.com/charmbracelet/lipgloss"
 )
 
 var (
-	headerStdout string
-	headerStderr string
+	headerOutput string
 	leftPadding  = lipgloss.NewStyle().PaddingLeft(2)
 )
 
 func init() {
 	var err error
-	if len(headerStdout) == 0 {
-		headerStdout, err = style.Glamour.Render("## stdout\n")
-		if err != nil {
-			panic(err)
-		}
-	}
-	if len(headerStderr) == 0 {
-		headerStderr, err = style.Glamour.Render("## stderr\n")
+	if len(headerOutput) == 0 {
+		headerOutput, err = style.Glamour.Render("## output\n")
 		if err != nil {
 			panic(err)
 		}
@@ -49,8 +44,7 @@ const (
 )
 
 type Output struct {
-	Stdout  string
-	Stderr  string
+	Log     string
 	Message string
 }
 
@@ -85,12 +79,8 @@ func NewWriteModel(opts Opts) *Model {
 	}
 }
 
-func (m *Model) SetStdoutResult(log string) {
-	m.output.Stdout = log
-}
-
-func (m *Model) SetStderrResult(log string) {
-	m.output.Stderr = log
+func (m *Model) SetOutputLog(log string) {
+	m.output.Log = log
 }
 
 func (m *Model) SetMessage(err error) {
@@ -137,9 +127,16 @@ func (m *Model) Prompt() {
 
 func (m *Model) ShouldRun() bool {
 	if m.IsRead() {
-		c := exec.Command("bash", "-c", sanitizeForExec(m.opts.Command)) //nolint:gosec
+		bashCommand := sanitizeForExec(m.opts.Command)
+		c := exec.Command("bash", "-c", bashCommand) //nolint:gosec
+		var b bytes.Buffer
+		c.Stdout = &b
+		c.Stderr = &b
+		debug.Output("run `%s`", bashCommand)
+		debug.Output("output: %s", b.String())
 		err := c.Run()
 		m.Complete(err == nil)
+		debug.Output("error: %v", err)
 		return false
 	}
 

@@ -25,7 +25,7 @@ func (inputs *Inputs) Commands() []*command.Model {
 	})
 	checkVMExists := command.NewReadModel(command.Opts{
 		Description: "Check if a Flightcrew VM already exists or needs to be created.",
-		Command:     `gcloud compute instances list --format="csv(NAME,EXTERNAL_IP,STATUS)" --project=${GOOGLE_PROJECT_ID} --zones=${ZONE} | awk -F "," "/${VIRTUAL_MACHINE}/ {print f(2), f(3)} function f(n){return (\$n==\"\" ? \"null\" : \$n)}"`,
+		Command:     `gcloud compute instances list --format="csv(NAME,EXTERNAL_IP,STATUS)" --project=${GOOGLE_PROJECT_ID} --zones=${ZONE} | awk -F "," "/${VIRTUAL_MACHINE}/ {print f(2), f(3)} function f(n){return (\$n==\"\" ? \"null\" : \$n)}" | [ $(wc -c) -gt "0" ]`,
 		Message: map[command.State]string{
 			command.PassState: "This Flightcrew VM already exists. Nothing to install.",
 			command.FailState: "No existing VM found. Next step is to create it.",

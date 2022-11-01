@@ -65,6 +65,7 @@ type Inputs struct {
 	requiredHelpText string
 	name             string
 	endDescription   string
+	vmIsUp           bool
 
 	commands []*command.Model
 }

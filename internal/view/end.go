@@ -17,8 +17,6 @@ type endModel struct {
 	// All of the commands that were run that should be displayed and maybe printed.
 	commands []*command.Model
 
-	description string
-
 	writeButton *button.Button
 	writeInput  wrapinput.Model
 	wrote       bool
@@ -29,7 +27,6 @@ func NewEndModel(inputs Inputs) *endModel {
 	m := &endModel{
 		inputs:      inputs,
 		commands:    inputs.Commands(),
-		description: inputs.EndDescription(),
 		writeButton: writeButton,
 		writeInput:  wrapinput.NewFreeForm(),
 		wrote:       false,
@@ -62,6 +59,9 @@ func (m *endModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m endModel) View() string {
 	var b strings.Builder
-	b.WriteString(m.description)
+	b.WriteString(m.inputs.EndDescription())
+	b.WriteRune('\n')
+	b.WriteString("Print output of commands to file? ")
+	b.WriteString(m.writeInput.View(wrapinput.ViewParams{ShowValue: false}))
 	return b.String()
 }

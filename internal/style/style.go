@@ -50,6 +50,7 @@ func init() {
 		// detect background color and pick either the default dark or light theme
 		glamour.WithAutoStyle(),
 		glamour.WithEmoji(),
+		glamour.WithWordWrap(100),
 	)
 
 	if err != nil {

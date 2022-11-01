@@ -65,20 +65,6 @@ var versionCmd = &cobra.Command{
 	},
 }
 
-type Env struct {
-	ExperimentalFeatures bool
-	DryRun               bool
-}
-
-func ParseEnv(c *cobra.Command) Env {
-	x := c.Flag("experimental")
-	dr := c.Flag("dry-run")
-	return Env{
-		ExperimentalFeatures: x != nil && x.Changed,
-		DryRun:               dr != nil && dr.Changed,
-	}
-}
-
 var gcpCmd = &cobra.Command{
 	Use:   "gcp",
 	Short: "Manage Flightcrew for Google Cloud Platform (GCP).",
