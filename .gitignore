@@ -1,0 +1,7 @@
+tmp/
+.env
+
+# Development and tool binaries
+bin/*
+
+dist/
