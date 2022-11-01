@@ -47,21 +47,11 @@ func Do(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int 
 	return 1
 }
 
-var version string
-
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number for Flightcrew's CLI",
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO(chris)
-		//	if debug.Traced {
-		//		defer trace.StartRegion(cmd.Context(), "version").End()
-		//	}
-		//	if version == "" {
-		//		fmt.Printf("%s\n", info.Version)
-		//	} else {
-		//		fmt.Printf("%s\n", version)
-		//	}
+		// TODO: Implement this.
 	},
 }
 
@@ -74,15 +64,6 @@ var gcpInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install a Flightcrew tower into Google Cloud Platform (GCP).",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		//	if debug.Traced {
-		//		defer trace.StartRegion(cmd.Context(), "compile").End()
-		//	}
-		//stderr := cmd.ErrOrStderr()
-		//dir, name := getConfigPath(stderr, cmd.Flag("file"))
-		//if _, err := Generate(cmd.Context(), ParseEnv(cmd), dir, name, stderr); err != nil {
-		//	os.Exit(1)
-		//}
-
 		if err := gcp.InitArtifactRegistry(); err != nil {
 			return fmt.Errorf("init artifact registry: %w", err)
 		}
@@ -102,7 +83,7 @@ var gcpInstallCmd = &cobra.Command{
 	},
 }
 
-/*
+/* TODO: Uncomment these when we need to implement them.
 var gcpUpgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "upgrade an existing Flightcrew tower in Google Cloud Provider (GCP) to another version.",
@@ -118,5 +99,4 @@ var gcpUninstallCmd = &cobra.Command{
 		return fmt.Errorf("uninstall is not yet implemented")
 	},
 }
-
 */

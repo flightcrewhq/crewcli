@@ -66,7 +66,6 @@ https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 		command.NewWriteModel(command.Opts{
 			SkipIfSucceed: checkVMExists,
 			Description:   "Create a VM instance attached to Flightcrew's service account, and run the Control Tower image.",
-			// TODO(chris): Switch between prod and dev
 			Command: `gcloud compute instances create-with-container ${VIRTUAL_MACHINE} \
 	--project=${GOOGLE_PROJECT_ID} \
 	--container-command="/ko-app/tower" \
