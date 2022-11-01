@@ -5,6 +5,7 @@ import (
 
 	"flightcrew.io/cli/internal/style"
 	"flightcrew.io/cli/internal/view/button"
+	"flightcrew.io/cli/internal/view/command"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -13,32 +14,46 @@ import (
 // pre-defined defaults that can be modified according to cloud providers' specific
 // requirements.
 type Inputs interface {
-	// Len returns the number of inputs in this grouping.
+	// Len returns the number of inputs in this grouping. The caller will assume that there are
+	// Len() number of inputs, so any index outside of [0, len) will be used for keeping state
+	// in the caller.
 	Len() int
+
 	// Validate gives the library a chance to convert any values that need to be converted
 	// or make sure that all inputs have valid values.
 	Validate() bool
+	// Reset goes from Validation state to Edit state.
 	Reset()
-	// Args turns the inputs into a map from key to value so that the inputted values can
-	// be replaced in the subsequent commands to be run.
-	Args() map[string]string
 
 	View() string
 	Update(msg tea.Msg) tea.Cmd
 
-	Focus(i int) tea.Cmd
+	// NextEmpty should return the index of the next empty user input field.
 	NextEmpty(i int) int
+	// Focus will be called every time the index changes. The index will assume that
+	// [0, inputs.Len()) refers to the inputs within this implementation. The implementation
+	// should be resilient to array out of bound.
+	Focus(i int) tea.Cmd
+
+	// Args should return the a map from key (managed by the implementer) to value for
+	// variables that should be replaced in the Commands below. Take care to create
+	// keys that will not be prefixes to commonly occurring words.
+	// e.g. Defining $PRE and $PREFIX may cause unexpected results.
+	Args() map[string]string
+	// Commands should return the list of commands that should be run after the inputs
+	// have been confirmed. Commands and descriptions will be updated with the input
+	// values based on the keys that are provided by the implementation.
+	Commands() []*command.Model
 }
 
 type inputsModel struct {
 	width  int
 	height int
 
-	description string
-	inputs      Inputs
-	index       int
-	hasErrors   bool
-	confirming  bool
+	inputs     Inputs
+	index      int
+	hasErrors  bool
+	confirming bool
 
 	submitButton     *button.Button
 	confirmYesButton *button.Button
