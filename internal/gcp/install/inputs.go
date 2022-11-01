@@ -99,7 +99,8 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 	inputs.args[keyTrafficRouter] = ""
 	inputs.args[keyGAEMaxVersionAge] = ""
 	inputs.args[keyGAEMaxVersionCount] = ""
-	inputs.args[keyGCELabel] = ""
+	inputs.args[keyGCELabel] = `
+--label=component=flightcrew \`
 	inputs.args[keyImagePath] = gcp.ImagePath
 
 	var maxTitleLength int
@@ -289,13 +290,6 @@ func (inputs *Inputs) Validate() bool {
 			if !ok {
 				setError(errors.New("invalid platform"))
 				break
-			}
-
-			if platform == constants.GoogleComputeEnginePlatform {
-				inputs.args[keyGCELabel] = `
-	--label=component=flightcrew \`
-			} else {
-				inputs.args[keyGCELabel] = ""
 			}
 
 			input.SetConverted(platform)
