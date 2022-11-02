@@ -1,0 +1,93 @@
+# https://gfgfddgleb.medium.com/how-to-test-your-go-code-with-github-actions-f15881d46089
+
+# GitHub action to build and test Go binaries on push and pull requests.
+
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tests:
+        - unit
+        - integration
+        - functional
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.19.x
+
+    - name: Test
+      run: go version && make test/${{ matrix.tests }}
+
+  gomod:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.19.x
+
+    - name: go mod tidy
+      run: go version && go mod tidy
+
+    - uses: chainguard-dev/actions/nodiff@main
+      with:
+        fixup-command: "go mod tidy"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        # LINT: Keep in sync with Makefile.binaries.
+        version: v1.48.0
+
+  golangci-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: bindl-dev/bindl@main
+      with:
+        install-dir: bin
+
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.19.x
+
+    - name: golangci-lint
+      run: make lint/gh-actions
+
+  gofmt:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.19.x
+
+    - name: gofmt
+      run: go version && gofmt -w $(find . -name '*.go')
+
+    - uses: chainguard-dev/actions/nodiff@main
+      with:
+        fixup-command: "gofmt -w"
