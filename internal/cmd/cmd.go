@@ -7,8 +7,9 @@ import (
 	"os"
 	"os/exec"
 
+	"flightcrew.io/cli/internal/constants"
+	"flightcrew.io/cli/internal/controller/gcpinstall"
 	"flightcrew.io/cli/internal/gcp"
-	gcpinstall "flightcrew.io/cli/internal/gcp/install"
 	"flightcrew.io/cli/internal/view"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -20,7 +21,7 @@ func init() {
 
 // Do runs the command logic.
 func Do(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
-	rootCmd := &cobra.Command{Use: "flycli", SilenceUsage: true}
+	rootCmd := &cobra.Command{Use: constants.CLIName, SilenceUsage: true}
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(gcpCmd)
@@ -66,7 +67,7 @@ var gcpInstallCmd = &cobra.Command{
 		}
 		defer cleanup()
 
-		p := tea.NewProgram(view.NewInputsModel(gcpinstall.NewInputs(env)))
+		p := tea.NewProgram(view.NewInputsModel(gcpinstall.NewInputsController(env)))
 		if err := p.Start(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)

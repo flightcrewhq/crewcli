@@ -6,6 +6,8 @@ const (
 	ProdBaseURL = "flightcrew.io"
 	DevBaseURL  = "flightcrew.dev"
 
+	CLIName = "crewcli"
+
 	appPrefix = "https://app"
 	apiPrefix = "api"
 )

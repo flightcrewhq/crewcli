@@ -3,64 +3,27 @@ package view
 import (
 	"strings"
 
+	"flightcrew.io/cli/internal/controller"
 	"flightcrew.io/cli/internal/style"
 	"flightcrew.io/cli/internal/view/button"
-	"flightcrew.io/cli/internal/view/command"
+	"flightcrew.io/cli/internal/view/wrapinput"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
-
-// Inputs is a variable number of inputs that can be changed. This interface allows
-// pre-defined defaults that can be modified according to cloud providers' specific
-// requirements.
-type Inputs interface {
-	// Name returns the name of the flow (e.g. gcp-install) and should be safe to write into
-	// a file name.
-	Name() string
-	// The description for when we reach the end screen.
-	EndDescription() string
-
-	// Len returns the number of inputs in this grouping. The caller will assume that there are
-	// Len() number of inputs, so any index outside of [0, len) will be used for keeping state
-	// in the caller.
-	Len() int
-
-	// Validate gives the library a chance to convert any values that need to be converted
-	// or make sure that all inputs have valid values.
-	Validate() bool
-	// Reset goes from Validation state to Edit state.
-	Reset()
-
-	View() string
-	Update(msg tea.Msg) tea.Cmd
-
-	// NextEmpty should return the index of the next empty user input field.
-	NextEmpty(i int) int
-	// Focus will be called every time the index changes. The index will assume that
-	// [0, inputs.Len()) refers to the inputs within this implementation. The implementation
-	// should be resilient to array out of bound.
-	Focus(i int) tea.Cmd
-
-	// FinalizeArgs is called when the inputs gathering step has been completed. This is the chance
-	// for the implementation to convert or move any values around. Commands() will be called to get
-	// the commands to run, so the implementer should handle when to replace variables in the
-	// commands.
-	// e.g. Defining $PRE and $PREFIX may cause unexpected results.
-	FinalizeArgs()
-	// Commands should return the list of commands that should be run after the inputs
-	// have been confirmed. Commands and descriptions will be updated with the input
-	// values based on the keys that are provided by the implementation. The run model will
-	// use and modify the same slice, so the implementation will be able to share the state.
-	Commands() []*command.Model
-}
 
 type InputsModel struct {
 	submitButton     *button.Button
 	confirmYesButton *button.Button
 	confirmNoButton  *button.Button
 
-	inputs Inputs
-	index  int
+	requiredHelpText string
+	defaultHelpText  string
+	description      string
+
+	controller controller.Inputs
+	inputs     []*wrapinput.Model
+	index      int
 
 	width  int
 	height int
@@ -69,20 +32,78 @@ type InputsModel struct {
 	confirming bool
 }
 
-func NewInputsModel(inputs Inputs) InputsModel {
+func NewInputsModel(controller controller.Inputs) InputsModel {
 	m := InputsModel{
-		inputs: inputs,
+		controller: controller,
 	}
 
 	m.submitButton, _ = button.New("Submit", 12)
 	m.confirmYesButton, _ = button.New("Continue", 12)
 	m.confirmNoButton, _ = button.New("Edit", 12)
 
-	m.inputs.Update(nil)
-	m.index = m.inputs.NextEmpty(m.index)
-	m.inputs.Focus(m.index)
+	allInputs := controller.GetAllInputs()
+	m.updateTitleStyles(allInputs)
+	m.updateHelpText(allInputs)
+
+	m.description, _ = style.Glamour.Render(strings.Replace(`## Welcome!
+
+This is the Flightcrew ${NAME} CLI! To get started, please fill in the information below.`, "${NAME}", controller.GetName(), 1))
+
+	m.inputs = controller.GetInputs()
+	m.updateInput(nil)
+	m.moveToNextEmptyInput()
+	m.updateFocusFrom(0)
 
 	return m
+}
+
+func (m *InputsModel) updateHelpText(inputs []*wrapinput.Model) {
+	countTrimmedRenderNewlines := func(text string) (string, int) {
+		wrappedText, _ := style.Glamour.Render(controller.DefaultHelpText)
+		trimmed := strings.Trim(wrappedText, "\n")
+		return trimmed, strings.Count(trimmed, "\n")
+	}
+
+	// Format help text.
+	var defaultLines int
+	m.defaultHelpText, defaultLines = countTrimmedRenderNewlines(controller.DefaultHelpText)
+
+	maxLines := defaultLines
+	lineCounts := make([]int, len(inputs))
+	for i := range inputs {
+		inputs[i].HelpText, lineCounts[i] = countTrimmedRenderNewlines(inputs[i].HelpText)
+		if lineCounts[i] > maxLines {
+			maxLines = lineCounts[i]
+		}
+	}
+
+	adjustNewlines := func(text string, currCount, desiredCount int) string {
+		if diff := desiredCount - currCount; diff > 0 {
+			return text + strings.Repeat("\n", diff)
+		}
+		return text
+	}
+	m.defaultHelpText = adjustNewlines(m.defaultHelpText, defaultLines, maxLines)
+	for i := range inputs {
+		inputs[i].HelpText = adjustNewlines(inputs[i].HelpText, lineCounts[i], maxLines)
+	}
+}
+
+func (m *InputsModel) updateTitleStyles(inputs []*wrapinput.Model) {
+	var maxTitleLength int
+	for _, input := range inputs {
+		if titleLength := len(input.Title); titleLength > maxTitleLength {
+			maxTitleLength = titleLength
+		}
+	}
+
+	// Format titles
+	titleStyle := lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength).MarginLeft(2).Render
+	for i := range inputs {
+		inputs[i].Title = titleStyle(inputs[i].Title)
+	}
+
+	m.requiredHelpText = titleStyle(style.Required("*")) + style.HelpColor.Render(" - required")
 }
 
 func (m InputsModel) Init() tea.Cmd {
@@ -96,9 +117,9 @@ func (m InputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height // height is available too
 
 	case tea.KeyMsg:
-		s := msg.String()
 		cmds := make([]tea.Cmd, 0)
-		switch s {
+		oldIndex := m.index
+		switch s := msg.String(); s {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
 
@@ -106,29 +127,28 @@ func (m InputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "tab", "shift+tab", "enter", "up", "down", "left", "right":
 			switch s {
 			case "enter":
-				if m.index == m.inputs.Len() {
+				if m.index == len(m.inputs) {
 					if !m.confirming {
 						m.confirming = true
-						m.hasErrors = !m.inputs.Validate()
+						m.hasErrors = !m.controller.Validate(m.inputs)
 						if m.hasErrors {
-							m.index = m.inputs.Len() + 1
+							m.index = len(m.inputs) + 1
 						}
 						return m, nil
 					}
 
-					m.inputs.FinalizeArgs()
-					return NewRunModel(m.inputs), nil
+					return NewRunModel(m.controller.GetRunController()), nil
 				}
 
-				if m.index == m.inputs.Len()+1 {
+				if m.index == len(m.inputs)+1 {
 					m.confirming = false
 					m.hasErrors = false
-					m.index = m.inputs.Len()
-					m.inputs.Reset()
+					m.index = len(m.inputs)
+					m.controller.Reset(m.inputs)
 					return m, nil
 				}
 
-				m.index = m.inputs.NextEmpty(m.index + 1)
+				m.moveToNextEmptyInput()
 
 			case "up", "shift+tab":
 				if !m.confirming {
@@ -142,10 +162,10 @@ func (m InputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case "tab":
 				if m.confirming {
-					if m.index == m.inputs.Len()+1 {
-						m.index = m.inputs.Len()
-					} else if m.index == m.inputs.Len() {
-						m.index = m.inputs.Len() + 1
+					if m.index == len(m.inputs)+1 {
+						m.index = len(m.inputs)
+					} else if m.index == len(m.inputs) {
+						m.index = len(m.inputs) + 1
 					}
 				} else {
 					m.index++
@@ -164,51 +184,110 @@ func (m InputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			if m.index > m.inputs.Len() {
-				if m.confirming && m.index > m.inputs.Len()+1 {
-					m.index = m.inputs.Len() + 1
+			if m.index > len(m.inputs) {
+				if m.confirming && m.index > len(m.inputs)+1 {
+					m.index = len(m.inputs) + 1
 				} else if !m.confirming {
 					m.index = 0
 				}
-			} else if m.confirming && m.index < m.inputs.Len() {
-				m.index = m.inputs.Len()
+			} else if m.confirming && m.index < len(m.inputs) {
+				m.index = len(m.inputs)
 			} else if !m.confirming && m.index < 0 {
-				m.index = m.inputs.Len()
+				m.index = len(m.inputs)
 			}
 
 			if m.confirming {
 				break
 			}
 
-			cmds = append(cmds, m.inputs.Focus(m.index))
-			if m.index < m.inputs.Len() {
-				cmds = append(cmds, m.inputs.Update(msg))
-			}
+			cmds = append(cmds, m.updateFocusFrom(oldIndex), m.updateInput(msg))
 			return m, tea.Batch(cmds...)
 		}
 	}
 
 	// Handle character input and blinking
-	return m, m.inputs.Update(msg)
+	return m, m.updateInput(msg)
+}
+
+func (m *InputsModel) updateFocusFrom(oldIndex int) tea.Cmd {
+	if oldIndex == m.index {
+		return nil
+	}
+
+	if oldIndex < len(m.inputs) {
+		m.inputs[oldIndex].Blur()
+	}
+
+	if m.index < len(m.inputs) {
+		return m.inputs[m.index].Focus()
+	}
+
+	return nil
+}
+
+func (m *InputsModel) updateInput(msg tea.Msg) tea.Cmd {
+	if m.index >= len(m.inputs) {
+		return nil
+	}
+
+	var cmd tea.Cmd
+	*m.inputs[m.index], cmd = m.inputs[m.index].Update(msg)
+	m.inputs = m.controller.GetInputs()
+	return cmd
+}
+
+func (m *InputsModel) moveToNextEmptyInput() {
+	for ; m.index < len(m.inputs); m.index++ {
+		if len(m.inputs[m.index].Value()) == 0 {
+			break
+		}
+	}
 }
 
 func (m InputsModel) View() string {
 	var b strings.Builder
-	b.WriteString(m.inputs.View())
+	b.WriteString(m.description)
+	b.WriteRune('\n')
+	b.WriteString(m.viewInputs())
 	b.WriteString("\n\n")
 
 	if m.confirming {
 		if !m.hasErrors {
-			b.WriteString(m.confirmYesButton.View(m.index == m.inputs.Len()))
+			b.WriteString(m.confirmYesButton.View(m.index == len(m.inputs)))
 			b.WriteRune(' ')
 		}
-		b.WriteString(m.confirmNoButton.View(m.index == m.inputs.Len()+1))
+		b.WriteString(m.confirmNoButton.View(m.index == len(m.inputs)+1))
 	} else {
-		b.WriteString(m.submitButton.View(m.index == m.inputs.Len()))
+		b.WriteString(m.submitButton.View(m.index == len(m.inputs)))
 	}
 
 	b.WriteString("\n\n")
 
 	b.WriteString(style.Help("ctrl+c/esc: quit • ←/→/↑/↓: nav • enter: proceed"))
+	return b.String()
+}
+
+func (m InputsModel) viewInputs() string {
+	var b strings.Builder
+	for _, input := range m.inputs {
+		b.WriteString(input.View(wrapinput.ViewParams{
+			ShowValue: m.confirming,
+		}))
+		b.WriteRune('\n')
+	}
+
+	if !m.confirming {
+		b.WriteString(m.requiredHelpText)
+		b.WriteRune('\n')
+	}
+
+	if m.index < len(m.inputs) {
+		b.WriteString(m.inputs[m.index].HelpText)
+		b.WriteRune('\n')
+	} else if !m.confirming {
+		b.WriteString(m.defaultHelpText)
+		b.WriteRune('\n')
+	}
+
 	return b.String()
 }

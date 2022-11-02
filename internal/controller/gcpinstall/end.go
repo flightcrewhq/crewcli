@@ -6,11 +6,33 @@ import (
 	"strings"
 
 	"flightcrew.io/cli/internal/style"
+	"flightcrew.io/cli/internal/view/command"
 )
 
-func (inputs *Inputs) EndDescription() string {
+type EndController struct {
+	replacer       *strings.Replacer
+	endDescription string
+	commands       []*command.Model
+	vmIsUp         bool
+}
+
+func NewEndController(commands []*command.Model) *EndController {
+	return &EndController{
+		commands: commands,
+	}
+}
+
+func (ctl EndController) Commands() []*command.Model {
+	return ctl.commands
+}
+
+func (ctl EndController) Name() string {
+	return "Google Cloud Platform Installation"
+}
+
+func (ctl *EndController) EndDescription() string {
 	rerender := false
-	if !inputs.vmIsUp {
+	if !ctl.vmIsUp {
 		// Checks to see if the SSH port (22) is open for the VM. If it is, then the user
 		// should be able to SSH into the machine.
 		cmd := exec.Command("bash", "-c", `$(gcloud compute instances list --format="csv(NAME,EXTERNAL_IP,STATUS)" --project=${PROJECT_ID} --zones=${ZONE} | awk -F "," "/${VIRTUAL_MACHINE}/{print f(2)} function f(n){return (\$n==\"\" ? \"null\" : \$n)}" | nc -w 1 -z`)
@@ -19,13 +41,13 @@ func (inputs *Inputs) EndDescription() string {
 		cmd.Stderr = &b
 		err := cmd.Run()
 		if err == nil {
-			inputs.vmIsUp = true
+			ctl.vmIsUp = true
 			rerender = true
 		}
 	}
 
-	if !rerender && len(inputs.endDescription) > 0 {
-		return inputs.endDescription
+	if !rerender && len(ctl.endDescription) > 0 {
+		return ctl.endDescription
 	}
 
 	var description = `## 🕊  Welcome to Flightcrew!
@@ -46,10 +68,10 @@ ${CODE_END}
 Head on over to ${APP_URL} to see the info your Tower collected.
 `
 
-	description = inputs.replacer.Replace(description)
+	description = ctl.replacer.Replace(description)
 	description = strings.Replace(description, "${CODE_START}", "```sh", 1)
 	description = strings.Replace(description, "${CODE_END}", "```", 1)
-	if inputs.vmIsUp {
+	if ctl.vmIsUp {
 		description = strings.Replace(description, "${MESSAGE}", "⏱ Your VM is still starting up.", 1)
 	} else {
 		description = strings.Replace(description, "${MESSAGE}", "✅ Your VM is available and running!", 1)

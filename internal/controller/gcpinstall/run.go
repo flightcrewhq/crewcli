@@ -1,10 +1,21 @@
 package gcpinstall
 
-import "flightcrew.io/cli/internal/view/command"
+import (
+	"strings"
 
-func (inputs *Inputs) Commands() []*command.Model {
-	if inputs.commands != nil {
-		return inputs.commands
+	"flightcrew.io/cli/internal/controller"
+	"flightcrew.io/cli/internal/view/command"
+)
+
+type RunController struct {
+	args     map[string]string
+	commands []*command.Model
+}
+
+func NewRunController(args map[string]string) *RunController {
+	replaceArgs := make([]string, 0, 2*len(args))
+	for key, arg := range args {
+		replaceArgs = append(replaceArgs, key, arg)
 	}
 
 	checkServiceAccount := command.NewReadModel(command.Opts{
@@ -72,12 +83,13 @@ https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 	--container-image="${IMAGE_PATH}:${TOWER_VERSION}" \
 	--container-arg="--debug=true" \
 	--container-env="FC_API_KEY=${API_TOKEN}" \
-	--container-env=CLOUD_PLATFORM=${PLATFORM} \${TRAFFIC_ROUTER}${GAE_MAX_VERSION_COUNT}${GAE_MAX_VERSION_AGE}${GCE_LABEL}
+	--container-env=CLOUD_PLATFORM=${PLATFORM} \${TRAFFIC_ROUTER}${GAE_MAX_VERSION_COUNT}${GAE_MAX_VERSION_AGE}
 	--container-env=FC_PACKAGE_VERSION=${TOWER_VERSION} \
 	--container-env=METRIC_PROVIDERS=stackdriver \
 	--container-env=FC_RPC_CONNECT_HOST=${RPC_HOST} \
 	--container-env=FC_RPC_CONNECT_PORT=443 \
 	--container-env=FC_TOWER_PORT=8080 \
+	--label=component=flightcrew \
 	--machine-type=e2-micro \
 	--scopes=cloud-platform \
 	--service-account="${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
@@ -96,10 +108,21 @@ https://serverfault.com/questions/980569/disable-fluentd-on-on-container-optimiz
 		}),
 	}
 
+	replacer := strings.NewReplacer(replaceArgs...)
 	for _, cmd := range commands {
-		cmd.Replace(inputs.replacer)
+		cmd.Replace(replacer)
 	}
-	inputs.commands = commands
 
-	return commands
+	return &RunController{
+		args:     args,
+		commands: commands,
+	}
+}
+
+func (ctl RunController) Commands() []*command.Model {
+	return ctl.commands
+}
+
+func (ctl *RunController) GetEndController() controller.End {
+	return NewEndController(ctl.commands)
 }

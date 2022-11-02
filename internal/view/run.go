@@ -3,6 +3,7 @@ package view
 import (
 	"strings"
 
+	"flightcrew.io/cli/internal/controller"
 	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/style"
 	"flightcrew.io/cli/internal/view/button"
@@ -21,14 +22,14 @@ type RunModel struct {
 	yesButton *button.Button
 	noButton  *button.Button
 
-	inputs    Inputs
+	inputs    controller.Run
 	paginator paginator.Model
 	index     int
 
 	userInput bool
 }
 
-func NewRunModel(inputs Inputs) *RunModel {
+func NewRunModel(inputs controller.Run) *RunModel {
 	debug.Output("New run model time!")
 
 	yesButton, _ := button.New("yes", 10)
@@ -138,7 +139,7 @@ func (m *RunModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.(type) {
 		case tea.KeyMsg:
 			if !m.nextCommand() {
-				return NewEndModel(m.inputs), nil
+				return NewEndModel(m.inputs.GetEndController()), nil
 			}
 
 			return m, nil

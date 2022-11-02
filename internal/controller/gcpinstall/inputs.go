@@ -8,14 +8,11 @@ import (
 	"strings"
 
 	"flightcrew.io/cli/internal/constants"
+	"flightcrew.io/cli/internal/controller"
 	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/gcp"
-	"flightcrew.io/cli/internal/style"
 	"flightcrew.io/cli/internal/timeconv"
-	"flightcrew.io/cli/internal/view/command"
 	"flightcrew.io/cli/internal/view/wrapinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 var (
@@ -51,62 +48,43 @@ var (
 	}
 )
 
-type Inputs struct {
-	tempDir          string
-	defaultHelpText  string
-	description      string
-	requiredHelpText string
-	name             string
-	endDescription   string
-	replacer         *strings.Replacer
-	inputs           map[string]*wrapinput.Model
-	args             map[string]string
-	inputKeys        []string
-	commands         []*command.Model
-	index            int
-	confirming       bool
-	vmIsUp           bool
+type InputsController struct {
+	tempDir   string
+	inputs    map[string]*wrapinput.Model
+	args      map[string]string
+	inputKeys []string
 }
 
-func NewInputs(params Params) *Inputs {
-	inputs := &Inputs{
+func NewInputsController(params Params) *InputsController {
+	ctl := &InputsController{
 		inputKeys: initialInputKeys,
 		inputs:    make(map[string]*wrapinput.Model),
 		args:      params.args,
 		tempDir:   params.tempDir,
-		name:      "gcp-install",
 	}
 
-	inputs.description, _ = style.Glamour.Render(`## Welcome!
-
-This is the Flightcrew installation CLI! To get started, please fill in the information below.`)
-
-	if !contains(inputs.args, keyVirtualMachine) {
-		inputs.args[keyVirtualMachine] = "flightcrew-control-tower"
+	if !contains(ctl.args, keyVirtualMachine) {
+		ctl.args[keyVirtualMachine] = "flightcrew-control-tower"
 	}
-	if !contains(inputs.args, keyZone) {
-		inputs.args[keyZone] = "us-central1-c"
+	if !contains(ctl.args, keyZone) {
+		ctl.args[keyZone] = "us-central1-c"
 	}
-	if !contains(inputs.args, keyTowerVersion) {
-		inputs.args[keyTowerVersion] = "stable"
+	if !contains(ctl.args, keyTowerVersion) {
+		ctl.args[keyTowerVersion] = "stable"
 	}
 
 	baseURL := gcp.GetHostBaseURL("", "")
-	inputs.args[keyAppURL] = constants.GetAppHostName(baseURL)
-	inputs.args[keyRPCHost] = constants.GetAPIHostName(baseURL)
-	inputs.args[keyTrafficRouter] = ""
-	inputs.args[keyGAEMaxVersionAge] = ""
-	inputs.args[keyGAEMaxVersionCount] = ""
-	inputs.args[keyGCELabel] = `
---label=component=flightcrew \`
-	inputs.args[keyImagePath] = gcp.ImagePath
-
-	var maxTitleLength int
+	ctl.args[keyAppURL] = constants.GetAppHostName(baseURL)
+	ctl.args[keyRPCHost] = constants.GetAPIHostName(baseURL)
+	ctl.args[keyTrafficRouter] = ""
+	ctl.args[keyGAEMaxVersionAge] = ""
+	ctl.args[keyGAEMaxVersionCount] = ""
+	ctl.args[keyImagePath] = gcp.ImagePath
 
 	for _, key := range allKeys {
 		var input wrapinput.Model
 		maybeSetValue := func(key string) {
-			if val, ok := inputs.args[key]; ok {
+			if val, ok := ctl.args[key]; ok {
 				input.SetValue(val)
 			}
 		}
@@ -158,8 +136,8 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 		case keyIAMServiceAccount:
 			input = wrapinput.NewFreeForm()
 			input.Title = "Service Account"
-			input.Default = "flightcrew-runner-test-chris"
-			input.SetValue("flightcrew-runner-test-chris")
+			input.Default = "flightcrew-runner"
+			input.SetValue("flightcrew-runner")
 			input.HelpText = "Service Account is the name of the (to be created) IAM service account to run the Flightcrew Tower."
 
 		case keyPlatform:
@@ -193,63 +171,28 @@ This is the Flightcrew installation CLI! To get started, please fill in the info
 		}
 
 		input.Blur()
-		inputs.inputs[key] = &input
-
-		if titleLength := len(inputs.inputs[key].Title); titleLength > maxTitleLength {
-			maxTitleLength = titleLength
-		}
+		ctl.inputs[key] = &input
 	}
-
-	// Format help text.
-	wrappedText, _ := style.Glamour.Render("> Edit a particular entry to see help text here.\n> Otherwise, press enter to proceed.")
-	inputs.defaultHelpText = strings.Trim(wrappedText, "\n")
-	defaultLines := strings.Count(inputs.defaultHelpText, "\n")
-	maxLines := defaultLines
-	lineCounts := make(map[string]int)
-	for k := range inputs.inputs {
-		wrappedText, _ := style.Glamour.Render("> " + inputs.inputs[k].HelpText)
-		inputs.inputs[k].HelpText = strings.Trim(wrappedText, "\n")
-		lineCounts[k] = strings.Count(inputs.inputs[k].HelpText, "\n")
-
-		if lineCounts[k] > maxLines {
-			maxLines = lineCounts[k]
-		}
-	}
-	if defaultDiff := maxLines - defaultLines; defaultDiff > 0 {
-		inputs.defaultHelpText += strings.Repeat("\n", defaultDiff)
-	}
-	for k := range inputs.inputs {
-		if diff := maxLines - lineCounts[k]; diff > 0 {
-			inputs.inputs[k].HelpText += strings.Repeat("\n", diff)
-		}
-	}
-
-	// Format titles
-	renderTitle := lipgloss.NewStyle().Align(lipgloss.Right).Width(maxTitleLength).MarginLeft(2).Render
-	for k := range inputs.inputs {
-		inputs.inputs[k].Title = renderTitle(inputs.inputs[k].Title)
-	}
-
-	inputs.requiredHelpText = renderTitle(style.Required("*")) + style.HelpColor.Render(" - required\n")
-
-	return inputs
+	return ctl
 }
 
-func (inputs *Inputs) Len() int {
-	return len(inputs.inputKeys)
+func (ctl InputsController) GetAllInputs() []*wrapinput.Model {
+	res := make([]*wrapinput.Model, 0, len(ctl.inputs))
+	for _, v := range ctl.inputs {
+		res = append(res, v)
+	}
+	return res
 }
 
-func (inputs *Inputs) Reset() {
-	inputs.confirming = false
-	for k := range inputs.inputs {
-		inputs.inputs[k].ResetValidation()
+func (ctl *InputsController) Reset(inputs []*wrapinput.Model) {
+	for k := range ctl.inputs {
+		ctl.inputs[k].ResetValidation()
 	}
 }
 
-func (inputs *Inputs) Validate() bool {
-	inputs.confirming = true
+func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 	hasErrors := false
-	for k, input := range inputs.inputs {
+	for k, input := range ctl.inputs {
 		setError := func(err error) bool {
 			if err != nil {
 				input.SetError(err)
@@ -277,10 +220,10 @@ func (inputs *Inputs) Validate() bool {
 			debug.Output("convert tower version is %s", version)
 
 		case keyVirtualMachine:
-			projectInput := inputs.inputs[keyProject]
+			projectInput := ctl.inputs[keyProject]
 			baseURL := gcp.GetHostBaseURL(projectInput.Value(), input.Value())
-			inputs.args[keyRPCHost] = constants.GetAPIHostName(baseURL)
-			inputs.args[keyAppURL] = constants.GetAppHostName(baseURL)
+			ctl.args[keyRPCHost] = constants.GetAPIHostName(baseURL)
+			ctl.args[keyAppURL] = constants.GetAppHostName(baseURL)
 
 		case keyPlatform:
 			displayName := input.Value()
@@ -293,7 +236,7 @@ func (inputs *Inputs) Validate() bool {
 			input.SetConverted(platform)
 
 		case keyPermissions:
-			platformInput := inputs.inputs[keyPlatform]
+			platformInput := ctl.inputs[keyPlatform]
 			platform, ok := constants.DisplayToPlatform[platformInput.Value()]
 			if !ok {
 				// Validation of this field occurs in keyPlatform.
@@ -313,7 +256,7 @@ func (inputs *Inputs) Validate() bool {
 				break
 			}
 
-			f, err := os.CreateTemp(inputs.tempDir, filenameReplacer.Replace(fmt.Sprintf("%s_%s", permission, platform)))
+			f, err := os.CreateTemp(ctl.tempDir, filenameReplacer.Replace(fmt.Sprintf("%s_%s", permission, platform)))
 			if err != nil {
 				setError(fmt.Errorf("failed to create temp file to put permissions YAML"))
 				break
@@ -326,13 +269,13 @@ func (inputs *Inputs) Validate() bool {
 			}
 
 			if permission == constants.Write {
-				inputs.args[keyTrafficRouter] = fmt.Sprintf(`
+				ctl.args[keyTrafficRouter] = fmt.Sprintf(`
 	--container-env=TRAFFIC_ROUTER=%s \`, platform)
 			} else {
-				inputs.args[keyTrafficRouter] = ""
+				ctl.args[keyTrafficRouter] = ""
 			}
-			inputs.args[keyIAMFile] = f.Name()
-			inputs.args[keyIAMRole] = permSettings.Role
+			ctl.args[keyIAMFile] = f.Name()
+			ctl.args[keyIAMRole] = permSettings.Role
 			input.SetInfo(fmt.Sprintf("see %s", f.Name()))
 
 		case keyGAEMaxVersionCount:
@@ -384,101 +327,37 @@ func (inputs *Inputs) Validate() bool {
 
 var convertDuration = timeconv.GetDurationFormatter([]string{"h", "m", "s"})
 
-func (inputs Inputs) Name() string {
-	return inputs.name
+func (ctl InputsController) GetRunController() controller.Run {
+	for _, k := range ctl.inputKeys {
+		ctl.args[k] = ctl.inputs[k].Value()
+	}
+
+	return NewRunController(ctl.args)
 }
 
-func (inputs *Inputs) FinalizeArgs() {
-	for _, k := range inputs.inputKeys {
-		inputs.args[k] = inputs.inputs[k].Value()
-	}
-
-	replaceArgs := make([]string, 0, 2*len(inputs.args))
-	for key, arg := range inputs.args {
-		replaceArgs = append(replaceArgs, key, arg)
-	}
-	inputs.replacer = strings.NewReplacer(replaceArgs...)
+func (ctl InputsController) GetName() string {
+	return "Google Cloud Platform Installation"
 }
 
-func (inputs Inputs) View() string {
-	var b strings.Builder
-	b.WriteString(inputs.description)
-	for _, k := range inputs.inputKeys {
-		b.WriteString(inputs.inputs[k].View(wrapinput.ViewParams{
-			ShowValue: inputs.confirming,
-		}))
-		b.WriteRune('\n')
-	}
-
-	if !inputs.confirming {
-		b.WriteString(inputs.requiredHelpText)
-	}
-
-	if inputs.index < len(inputs.inputKeys) {
-		b.WriteString(inputs.getInput(inputs.index).HelpText)
-		b.WriteRune('\n')
-	} else if !inputs.confirming {
-		b.WriteString(inputs.defaultHelpText)
-		b.WriteRune('\n')
-	}
-
-	return b.String()
-}
-
-func (inputs *Inputs) Update(msg tea.Msg) tea.Cmd {
-	defer inputs.updateInputKeys()
-
-	if inputs.index < len(inputs.inputKeys) {
-		var cmd tea.Cmd
-		k := inputs.inputKeys[inputs.index]
-		*inputs.inputs[k], cmd = inputs.inputs[k].Update(msg)
-		return cmd
-	}
-
-	return nil
-}
-
-func (inputs *Inputs) NextEmpty(i int) int {
-	for ; i < len(inputs.inputKeys); i++ {
-		if len(inputs.getInput(i).Value()) == 0 {
-			break
-		}
-	}
-	return i
-}
-
-func (inputs *Inputs) getInput(i int) *wrapinput.Model {
-	k := inputs.inputKeys[i]
-	return inputs.inputs[k]
-}
-
-func (inputs *Inputs) Focus(i int) tea.Cmd {
-	if i == inputs.index {
-		return nil
-	}
-
-	defer func() {
-		inputs.index = i
-	}()
-
-	if inputs.index < inputs.Len() {
-		inputs.getInput(inputs.index).Blur()
-	}
-
-	if i < len(inputs.inputKeys) {
-		return inputs.getInput(i).Focus()
-	}
-
-	return nil
-}
-
-func (inputs *Inputs) updateInputKeys() {
-	platformInput := inputs.inputs[keyPlatform]
-	permissionsInput := inputs.inputs[keyPermissions]
+func (ctl *InputsController) GetInputs() []*wrapinput.Model {
+	platformInput := ctl.inputs[keyPlatform]
+	permissionsInput := ctl.inputs[keyPermissions]
+	var keys []string
 	if platformInput.Radio.Value() == constants.GoogleAppEngineStdDisplay &&
 		permissionsInput.Radio.Value() == constants.Write {
-		inputs.inputKeys = writeAppEngineInputKeys
+		keys = writeAppEngineInputKeys
 	} else {
-		inputs.inputKeys = initialInputKeys
+		keys = initialInputKeys
 	}
+
+	inputs := make([]*wrapinput.Model, 0, len(keys))
+	for _, k := range keys {
+		inputs = append(inputs, ctl.inputs[k])
+	}
+	return inputs
+}
+
+func contains(m map[string]string, key string) bool {
+	_, ok := m[key]
+	return ok
 }
