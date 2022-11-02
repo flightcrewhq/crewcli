@@ -22,8 +22,6 @@ programs:
       target: "{{ .Name }}-{{ .OS }}-{{ .Arch }}"
       checksums:
         artifact: "{{ .Name }}_checksums.txt"
-        certificate: "{{ .Name }}_checksums.txt-keyless.pem"
-        signature: "{{ .Name }}_checksums.txt-keyless.sig"
   - name: goreleaser
     version: 1.12.3
     provider: github
@@ -33,5 +31,11 @@ programs:
       target: "{{ .Name }}_{{ .OS }}_{{ .Arch }}.tar.gz"
       checksums:
         artifact: checksums.txt
-        certificate: checksums.txt.pem
-        signature: checksums.txt.sig
+  - name: golangci-lint
+    version: 1.50.1
+    provider: github
+    paths:
+      base: golangci/golangci-lint
+      target: "{{ .Name }}-{{ .Version }}-{{ .OS }}-{{ .Arch }}.tar.gz"
+      checksums:
+        artifact: "{{ .Name }}-{{ .Version }}-checksums.txt"

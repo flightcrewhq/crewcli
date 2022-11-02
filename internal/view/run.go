@@ -16,27 +16,25 @@ type cmdFinishedErr struct {
 	err error
 }
 
-type runModel struct {
-	paginator paginator.Model
-	inputs    Inputs
-
-	commands     []*command.Model
-	currentIndex int
-
-	userInput bool
+type RunModel struct {
+	commands  []*command.Model
 	yesButton *button.Button
 	noButton  *button.Button
 
-	quitting bool
+	inputs    Inputs
+	paginator paginator.Model
+	index     int
+
+	userInput bool
 }
 
-func NewRunModel(inputs Inputs) *runModel {
+func NewRunModel(inputs Inputs) *RunModel {
 	debug.Output("New run model time!")
 
 	yesButton, _ := button.New("yes", 10)
 	noButton, _ := button.New("no", 10)
 
-	m := &runModel{
+	m := &RunModel{
 		inputs:    inputs,
 		commands:  inputs.Commands(),
 		yesButton: yesButton,
@@ -61,12 +59,12 @@ func NewRunModel(inputs Inputs) *runModel {
 	return m
 }
 
-func (m *runModel) Init() tea.Cmd {
+func (m *RunModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if m.currentIndex >= len(m.commands) {
+func (m *RunModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.index >= len(m.commands) {
 		return m, tea.Quit
 	}
 
@@ -84,7 +82,7 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "l":
 			// Don't allow user to advance to future commands that haven't been run or prompted yet.
-			if m.paginator.Page < m.currentIndex {
+			if m.paginator.Page < m.index {
 				var cmd tea.Cmd
 				m.paginator, cmd = m.paginator.Update(msg)
 				return m, cmd
@@ -92,7 +90,7 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	cmd := m.commands[m.currentIndex]
+	cmd := m.commands[m.index]
 	switch cmd.State() {
 	case command.PromptState:
 		switch msg := msg.(type) {
@@ -130,7 +128,7 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case command.RunningState:
 		switch msg := msg.(type) {
 		case cmdFinishedErr:
-			cmd := m.commands[m.currentIndex]
+			cmd := m.commands[m.index]
 			cmd.Complete(msg.err == nil)
 			return m, nil
 		}
@@ -156,7 +154,7 @@ func (m *runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *runModel) View() string {
+func (m *RunModel) View() string {
 	var b strings.Builder
 	cmd := m.commands[m.paginator.Page]
 	b.WriteRune('\n')
@@ -190,10 +188,10 @@ func (m *runModel) View() string {
 	return b.String()
 }
 
-func (m *runModel) nextCommand() bool {
-	for ; m.currentIndex < len(m.commands); m.currentIndex++ {
-		m.paginator.Page = m.currentIndex
-		current := m.commands[m.currentIndex]
+func (m *RunModel) nextCommand() bool {
+	for ; m.index < len(m.commands); m.index++ {
+		m.paginator.Page = m.index
+		current := m.commands[m.index]
 		if current.State() != command.NoneState {
 			continue
 		}

@@ -21,8 +21,8 @@ func New(text string, width int) (*Button, error) {
 	rightPadding := numPadding - leftPadding
 
 	// Make space for the brackets.
-	leftPadding -= 1
-	rightPadding -= 1
+	leftPadding--
+	rightPadding--
 
 	return &Button{
 		text: fmt.Sprintf("[%s%s%s]",

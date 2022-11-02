@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type endModel struct {
+type EndModel struct {
 	inputs Inputs
 
 	// All of the commands that were run that should be displayed and maybe printed.
@@ -22,9 +22,9 @@ type endModel struct {
 	wrote       bool
 }
 
-func NewEndModel(inputs Inputs) *endModel {
+func NewEndModel(inputs Inputs) *EndModel {
 	writeButton, _ := button.New("Write", 10)
-	m := &endModel{
+	m := &EndModel{
 		inputs:      inputs,
 		commands:    inputs.Commands(),
 		writeButton: writeButton,
@@ -40,11 +40,11 @@ func NewEndModel(inputs Inputs) *endModel {
 	return m
 }
 
-func (m *endModel) Init() tea.Cmd {
+func (m *EndModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m *endModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *EndModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		s := msg.String()
@@ -57,7 +57,7 @@ func (m *endModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m endModel) View() string {
+func (m EndModel) View() string {
 	var b strings.Builder
 	b.WriteString(m.inputs.EndDescription())
 	b.WriteRune('\n')

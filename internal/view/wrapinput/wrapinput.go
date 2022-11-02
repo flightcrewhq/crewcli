@@ -16,18 +16,19 @@ type ValidateParams struct {
 }
 
 type Model struct {
-	Title    string
-	HelpText string
-	Required bool
-	Default  string
-	// If the value is to be converted, this is only valid when model.confirming is true.
-
-	validating bool
-	validation ValidateParams
-
 	// Types of inputs. Pointers so that we can tell which one is being used.
 	Freeform *textinput.Model
 	Radio    *radioinput.Model
+
+	Title    string
+	HelpText string
+	Default  string
+	// If the value is to be converted, this is only valid when model.confirming is true.
+
+	validation ValidateParams
+	validating bool
+
+	Required bool
 }
 
 func NewRadio(options []string) Model {

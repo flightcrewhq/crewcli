@@ -9,22 +9,22 @@ import (
 	"flightcrew.io/cli/internal/debug"
 )
 
-type wrappedCommand struct {
+type WrappedCommand struct {
 	model          *Model
-	combinedOutput bytes.Buffer
 	cmd            *exec.Cmd
+	combinedOutput bytes.Buffer
 }
 
-func newWrappedCommand(m *Model) *wrappedCommand {
+func newWrappedCommand(m *Model) *WrappedCommand {
 	bashCommand := sanitizeForExec(m.opts.Command)
 	c := exec.Command("bash", "-c", bashCommand)
 	debug.Output("new wrapped command:\n  %s", bashCommand)
-	return &wrappedCommand{
+	return &WrappedCommand{
 		cmd:   c,
 		model: m,
 	}
 }
-func (wc *wrappedCommand) Run() error {
+func (wc *WrappedCommand) Run() error {
 	debug.Output("run command: %s", wc.model.opts.Command)
 	err := wc.cmd.Run()
 	wc.model.SetOutputLog(wc.combinedOutput.String())
@@ -32,13 +32,13 @@ func (wc *wrappedCommand) Run() error {
 	debug.Output("err: %v\ncombined (%d): %s\n", err, len(wc.model.output.Log), wc.model.output.Log)
 	return err
 }
-func (wc *wrappedCommand) SetStdin(r io.Reader) {
+func (wc *WrappedCommand) SetStdin(r io.Reader) {
 	wc.cmd.Stdin = r
 }
-func (wc *wrappedCommand) SetStdout(w io.Writer) {
+func (wc *WrappedCommand) SetStdout(w io.Writer) {
 	wc.cmd.Stdout = io.MultiWriter(w, &wc.combinedOutput)
 }
-func (wc *wrappedCommand) SetStderr(w io.Writer) {
+func (wc *WrappedCommand) SetStderr(w io.Writer) {
 	wc.cmd.Stderr = io.MultiWriter(w, &wc.combinedOutput)
 }
 

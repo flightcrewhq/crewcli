@@ -91,15 +91,16 @@ func ParseFlags(cmd *cobra.Command) (Params, func(), error) {
 		params.args[keyPermissions] = constants.Read
 	}
 
-	if displayName, ok := constants.KeyToDisplay[*platformFlag]; !ok {
+	displayName, ok := constants.KeyToDisplay[*platformFlag]
+	if !ok {
 		desired := make([]string, 0, len(constants.KeyToDisplay))
 		for k := range constants.KeyToDisplay {
 			desired = append(desired, k)
 		}
 		return Params{}, nil, fmt.Errorf("invalid --platform flag: %s", strings.Join(desired, ", "))
-	} else {
-		maybeAddEnv(params.args, keyPlatform, displayName)
 	}
+
+	maybeAddEnv(params.args, keyPlatform, displayName)
 
 	dir, err := os.MkdirTemp("", "flightcrew-gcp-install-*")
 	if err != nil {

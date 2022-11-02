@@ -30,7 +30,9 @@ func Enable(fn string) (func(), error) {
 		return nil, err
 	}
 
-	f.Sync()
+	if err := f.Sync(); err != nil {
+		return nil, err
+	}
 
 	logger = &logWriter{
 		w: f,
@@ -47,6 +49,6 @@ func Output(detail string, args ...interface{}) {
 	}
 
 	str := fmt.Sprintf(detail+"\n", args...)
-	logger.w.WriteString(str)
-	logger.w.Sync()
+	_, _ = logger.w.WriteString(str)
+	_ = logger.w.Sync()
 }

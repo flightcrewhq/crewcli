@@ -23,3 +23,15 @@ release: bin/goreleaser bin/cosign
 .PHONY: test/all
 test:
 	${GO} test -race -v ./...
+
+.PHONY: lint
+lint: bin/golangci-lint
+	bin/golangci-lint run
+
+.PHONY: lint/fix
+lint/fix: bin/golangci-lint
+	bin/golangci-lint run --fix
+
+.PHONY: lint/gh-actions
+lint/gh-actions: bin/golangci-lint
+	bin/golangci-lint run --out-format github-actions

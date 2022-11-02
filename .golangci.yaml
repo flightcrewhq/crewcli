@@ -1,0 +1,73 @@
+# Configuration settings: https://golangci-lint.run/usage/configuration/
+
+linters-settings:
+  depguard:
+    include-go-root: true
+    packages:
+      - io/ioutil
+    packages-with-error-message:
+      - io/ioutil: 'ioutil was deprecated in 1.16 (https://go.dev/doc/go1.16#ioutil)'
+  forbidigo:
+    forbid:
+      - ^print.*$
+
+  goimports:
+    local-prefixes: 'flightcrew.io/cli'
+
+  govet:
+    enable:
+      - asmdecl
+      - assign
+      - atomic
+      - atomicalign
+      - bools
+      - buildtag
+      - cgocall
+      - composites
+      - copylocks
+      - deepequalerrors
+      - errorsas
+      - fieldalignment
+      - findcall
+      - framepointer
+      - httpresponse
+      - ifaceassert
+      - loopclosure
+      - lostcancel
+      - nilfunc
+      - nilness
+      - printf
+      - reflectvaluecompare
+      - shift
+      - sigchanyzer
+      - sortslice
+      - stdmethods
+      - stringintconv
+      - structtag
+      - testinggoroutine
+      - tests
+      - unmarshal
+      - unreachable
+      - unsafeptr
+      - unusedresult
+      - unusedwrite
+
+linters:
+  enable:
+    - govet
+    - revive
+  disable:
+    - goheader
+
+run:
+  timeout: 5m
+  tests: false
+
+issues:
+  exclude-rules:
+  - path: _test\.go
+    linters:
+    - errcheck
+    - gosec
+  max-issues-per-linter: 0
+  max-same-issues: 0
