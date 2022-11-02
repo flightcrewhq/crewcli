@@ -18,7 +18,7 @@ bin/crewcli-dev: bin/goreleaser
 
 .PHONY: release
 release: bin/goreleaser bin/cosign
-
+	PATH=${PWD}/bin:${PATH} bin/goreleaser release --rm-dist
 
 .PHONY: test/all
 test:

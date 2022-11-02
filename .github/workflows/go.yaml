@@ -39,21 +39,6 @@ jobs:
       with:
         fixup-command: "go mod tidy"
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions/setup-go@v3
-      with:
-        go-version: 1.18
-
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        # LINT: Keep in sync with Makefile.binaries.
-        version: v1.48.0
-
   golangci-lint:
     runs-on: ubuntu-latest
     steps:
