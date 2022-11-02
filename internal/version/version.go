@@ -20,10 +20,6 @@ func init() {
 		panic("read build info")
 	}
 
-	fmt.Printf("info:\n%+v\n\n", info)
-	fmt.Printf("main:\n%+v\n\n", info.Main)
-	fmt.Printf("setting:\n%+v\n\n", info.Settings)
-
 	version = info.Main.Version
 	goVersion = info.GoVersion
 	checksum = info.Main.Sum
