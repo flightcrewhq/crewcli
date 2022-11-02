@@ -10,11 +10,10 @@ import (
 )
 
 type EndController struct {
-	args           map[string]string
+	replacer       *strings.Replacer
+	endDescription string
 	commands       []*command.Model
 	vmIsUp         bool
-	endDescription string
-	replacer       *strings.Replacer
 }
 
 func NewEndController(commands []*command.Model) *EndController {
