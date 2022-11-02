@@ -35,7 +35,6 @@ const (
 	keyTempDir            = "${TEMP_DIR}"
 	keyGAEMaxVersionCount = "${GAE_MAX_VERSION_COUNT}"
 	keyGAEMaxVersionAge   = "${GAE_MAX_VERSION_AGE}"
-	keyGCELabel           = "${GCE_LABEL}"
 )
 
 var (
@@ -119,9 +118,4 @@ func maybeAddEnv(m map[string]string, key, value string) {
 	if len(value) > 0 {
 		m[key] = value
 	}
-}
-
-func contains(m map[string]string, key string) bool {
-	_, ok := m[key]
-	return ok
 }

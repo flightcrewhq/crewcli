@@ -10,11 +10,12 @@ include Makefile.*
 .PHONY: bin/crewcli-dev
 bin/crewcli-dev: bin/goreleaser
 	([ -f bin/crewcli ] && rm bin/crewcli) || exit 0
-	goreleaser build \
-		--snapshot \
-		--rm-dist \
-		--single-target \
-		--output bin/crewcli
+	GOOS=$(go env GOOS) GOARCH=$(go env GOARCH) \
+		goreleaser build \
+			--snapshot \
+			--rm-dist \
+			--single-target \
+			--output bin/crewcli
 
 .PHONY: release
 release: bin/goreleaser bin/cosign

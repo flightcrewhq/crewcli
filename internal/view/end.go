@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"flightcrew.io/cli/internal/controller"
 	"flightcrew.io/cli/internal/view/button"
 	"flightcrew.io/cli/internal/view/command"
 	"flightcrew.io/cli/internal/view/wrapinput"
@@ -12,7 +13,7 @@ import (
 )
 
 type EndModel struct {
-	inputs Inputs
+	controller controller.End
 
 	// All of the commands that were run that should be displayed and maybe printed.
 	commands []*command.Model
@@ -22,18 +23,18 @@ type EndModel struct {
 	wrote       bool
 }
 
-func NewEndModel(inputs Inputs) *EndModel {
+func NewEndModel(ctl controller.End) *EndModel {
 	writeButton, _ := button.New("Write", 10)
 	m := &EndModel{
-		inputs:      inputs,
-		commands:    inputs.Commands(),
+		controller:  ctl,
+		commands:    ctl.Commands(),
 		writeButton: writeButton,
 		writeInput:  wrapinput.NewFreeForm(),
 		wrote:       false,
 	}
 
 	input := m.writeInput.Freeform
-	defaultFile := fmt.Sprintf("/tmp/%s_%d/output/log", inputs.Name(), time.Now().Unix())
+	defaultFile := fmt.Sprintf("/tmp/%s_%d/output/log", ctl.Name(), time.Now().Unix())
 	input.Placeholder = defaultFile
 	m.writeInput.Default = defaultFile
 
@@ -59,7 +60,7 @@ func (m *EndModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m EndModel) View() string {
 	var b strings.Builder
-	b.WriteString(m.inputs.EndDescription())
+	b.WriteString(m.controller.EndDescription())
 	b.WriteRune('\n')
 	b.WriteString("Print output of commands to file? ")
 	b.WriteString(m.writeInput.View(wrapinput.ViewParams{ShowValue: false}))

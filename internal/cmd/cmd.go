@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 
+	"flightcrew.io/cli/internal/controller/gcpinstall"
 	"flightcrew.io/cli/internal/gcp"
-	gcpinstall "flightcrew.io/cli/internal/gcp/install"
 	"flightcrew.io/cli/internal/view"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -66,7 +66,7 @@ var gcpInstallCmd = &cobra.Command{
 		}
 		defer cleanup()
 
-		p := tea.NewProgram(view.NewInputsModel(gcpinstall.NewInputs(env)))
+		p := tea.NewProgram(view.NewInputsModel(gcpinstall.NewInputsController(env)))
 		if err := p.Start(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
