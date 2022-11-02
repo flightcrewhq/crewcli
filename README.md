@@ -7,18 +7,16 @@ This is the command line interface for installing Flightcrew.
 ## Get Started
 
 1. Specify where you'd like `crewcli` to exist.
-
-   ```sh
-   export OUTDIR=/usr/local/bin
-   ```
-
 2. Run the bootstrap script to download the latest release and verify that the checksums match.
 
    To inspect the contents, go to <https://github.com/flightcrewhq/crewcli/blob/main/bootstrap.sh/>
 
-   ```sh
-   curl --location https://raw.githubusercontent.com/flightcrewhq/crewcli/main/bootstrap.sh | bash
-   ```
+```sh
+# Where you'd like crewcli to be installed.
+export OUTDIR=/usr/local/bin
+# Please look at the file before you run it.
+curl --location https://raw.githubusercontent.com/flightcrewhq/crewcli/main/bootstrap.sh | bash
+```
 
 ## Usage
 
