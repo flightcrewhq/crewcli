@@ -1,0 +1,67 @@
+programs:
+- checksums:
+    cosign-darwin-amd64:
+      archive: 1d164b8b1fcfef1e1870d809edbb9862afd5995cab63687a440b84cca5680ecf
+      binary: 1d164b8b1fcfef1e1870d809edbb9862afd5995cab63687a440b84cca5680ecf
+    cosign-darwin-arm64:
+      archive: 02bef878916be048fd7dcf742105639f53706a59b5b03f4e4eaccc01d05bc7ab
+      binary: 02bef878916be048fd7dcf742105639f53706a59b5b03f4e4eaccc01d05bc7ab
+    cosign-linux-amd64:
+      archive: a50651a67b42714d6f1a66eb6773bf214dacae321f04323c0885f6a433051f95
+      binary: a50651a67b42714d6f1a66eb6773bf214dacae321f04323c0885f6a433051f95
+    cosign-linux-arm64:
+      archive: a7a79a52c7747e2c21554cad4600e6c7130c0429017dd258f9c558d957fa9090
+      binary: a7a79a52c7747e2c21554cad4600e6c7130c0429017dd258f9c558d957fa9090
+  name: cosign
+  paths:
+    base: https://github.com/sigstore/cosign/releases/download/v{{ .Version }}/
+    checksums:
+      artifact: https://github.com/sigstore/cosign/releases/download/v{{ .Version }}/{{ .Name }}_checksums.txt
+    target: '{{ .Name }}-{{ .OS }}-{{ .Arch }}'
+  version: 1.13.1
+- checksums:
+    golangci-lint-1.50.1-darwin-amd64.tar.gz:
+      archive: 0f615fb8c364f6e4a213f2ed2ff7aa1fc2b208addf29511e89c03534067bbf57
+      binary: 1e3eb546dade0240ed4d7f66b285e53372284d67a8fb6bde5c0a0cba7e0ecd00
+    golangci-lint-1.50.1-darwin-arm64.tar.gz:
+      archive: 3ca9753d7804b34f9165427fbe339dbea69bd80be8a10e3f02c6037393b2e1c4
+      binary: 81df988a92755779bf254d8a29eefc0539befa043ce2ad870bdba1dc27a4cc21
+    golangci-lint-1.50.1-linux-amd64.tar.gz:
+      archive: 4ba1dc9dbdf05b7bdc6f0e04bdfe6f63aa70576f51817be1b2540bbce017b69a
+      binary: 56888e40c2b0610920017bde942ed4a0510ffd4f842cd3bc8ae5e4d8bbd1d5b5
+    golangci-lint-1.50.1-linux-arm64.tar.gz:
+      archive: 3ea0a6d5946340f6831646e2c67a317dd9b35bdc4e09b2df953a86f09ba05d74
+      binary: 92b436f9bd9fb521d66e144585a183971e8cf46a40e42b28662b50c41316e7d1
+  name: golangci-lint
+  paths:
+    base: https://github.com/golangci/golangci-lint/releases/download/v{{ .Version }}/
+    checksums:
+      artifact: https://github.com/golangci/golangci-lint/releases/download/v{{ .Version }}/{{ .Name }}-{{ .Version }}-checksums.txt
+    target: '{{ .Name }}-{{ .Version }}-{{ .OS }}-{{ .Arch }}.tar.gz'
+  version: 1.50.1
+- checksums:
+    goreleaser_Darwin_arm64.tar.gz:
+      archive: d3c1477754cf9be277d6e3d14207612d10f3899914ccf5140ccdb47d1bd6f094
+      binary: 611e2ce527614155c9d77b017b7c13e545b60d5d6358025bc9cbc70dc7e3e74d
+    goreleaser_Darwin_x86_64.tar.gz:
+      archive: 8c9f36df1ed2e68d84e28ad1735c2a2bc96b53df76e05177df67f50c79c3baba
+      binary: e7d6844699eb51c2f318f5931137d02977eb87661d94e0f213a181bfe8a7b20a
+    goreleaser_Linux_arm64.tar.gz:
+      archive: c646cc4f7d35f6a1db93bf5b79e537de6f43edff75abafd02c154a9ed746486a
+      binary: 6cf065f3a94706a496a562a3ec7996176036c78248740c276262eb04e9fe66e0
+    goreleaser_Linux_x86_64.tar.gz:
+      archive: 1e3729490abedf076bafe8f4526b505b1cd36bf1a60459923ee14d1322678423
+      binary: 75b798dcf7a4552b5645fe3ac6fa450bac419f099aae8d669ae520a55a124cd4
+  name: goreleaser
+  overlay:
+    Arch:
+      amd64: x86_64
+    OS:
+      darwin: Darwin
+      linux: Linux
+  paths:
+    base: https://github.com/goreleaser/goreleaser/releases/download/v{{ .Version }}/
+    checksums:
+      artifact: https://github.com/goreleaser/goreleaser/releases/download/v{{ .Version }}/checksums.txt
+    target: '{{ .Name }}_{{ .OS }}_{{ .Arch }}.tar.gz'
+  version: 1.12.3

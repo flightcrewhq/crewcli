@@ -49,11 +49,11 @@ type Output struct {
 }
 
 type Opts struct {
-	Command     string
-	Description string
-	Message     map[State]string
 	// If this read-only command succeeds, then we should not run the actual command.
 	SkipIfSucceed *Model
+	Message       map[State]string
+	Command       string
+	Description   string
 }
 
 type Model struct {
@@ -116,7 +116,7 @@ func (m Model) IsRead() bool {
 	return m.commandType == ReadType
 }
 
-func (m *Model) GetCommandToRun() *wrappedCommand {
+func (m *Model) GetCommandToRun() *WrappedCommand {
 	m.state = RunningState
 	return newWrappedCommand(m)
 }

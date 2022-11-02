@@ -9,10 +9,10 @@ import (
 )
 
 type Model struct {
-	options      []string
-	currentIndex int
 	prevKeys     map[string]struct{}
 	nextKeys     map[string]struct{}
+	options      []string
+	currentIndex int
 	focused      bool
 }
 

@@ -1,0 +1,59 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+builds:
+  - main: ./cmd/flycli/main.go
+    id: crewcli
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    flags:
+      - -trimpath
+    ldflags:
+      # This will populate the variables in the following packages when building.
+      # https://stackoverflow.com/questions/47509272/how-to-set-package-variable-using-ldflags-x-in-golang-build/47510909#47510909
+      - -s -w -X flightcrew.io/cli/internal/cmd.version={{.Version}} -X flightcrew.io/cli/internal/cmd.commit={{.Commit}} -X flightcrew.io/cli/internal/cmd.date={{.CommitDate}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+signs:
+  - cmd: cosign
+    env:
+    - COSIGN_EXPERIMENTAL=1
+    certificate: '${artifact}.pem'
+    args:
+      - sign-blob
+      - '--output-certificate=${certificate}'
+      - '--output-signature=${signature}'
+      - '${artifact}'
+    artifacts: checksum
+    output: true
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+    # Naming modification from default:
+    # - Use dash '-' instead of underscore '_' for better visibility in x86_64 scenario
+    # - Remove version from name to simplify bootstrapping
+    name_template: '{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}-{{ . }}{{ end }}'
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+# modelines, feel free to remove those if you don't want/use them:
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj

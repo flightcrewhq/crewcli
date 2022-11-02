@@ -1,0 +1,41 @@
+platforms:
+  linux:
+    - amd64
+    - arm64
+  darwin:
+    - amd64
+    - arm64
+
+_uname: &uname
+  OS: &uname_OS
+    linux: Linux
+    darwin: Darwin
+  Arch: &uname_Arch
+    amd64: x86_64
+
+programs:
+  - name: cosign
+    version: 1.13.1
+    provider: github
+    paths:
+      base: sigstore/cosign
+      target: "{{ .Name }}-{{ .OS }}-{{ .Arch }}"
+      checksums:
+        artifact: "{{ .Name }}_checksums.txt"
+  - name: goreleaser
+    version: 1.12.3
+    provider: github
+    overlay: *uname
+    paths:
+      base: goreleaser/goreleaser
+      target: "{{ .Name }}_{{ .OS }}_{{ .Arch }}.tar.gz"
+      checksums:
+        artifact: checksums.txt
+  - name: golangci-lint
+    version: 1.50.1
+    provider: github
+    paths:
+      base: golangci/golangci-lint
+      target: "{{ .Name }}-{{ .Version }}-{{ .OS }}-{{ .Arch }}.tar.gz"
+      checksums:
+        artifact: "{{ .Name }}-{{ .Version }}-checksums.txt"

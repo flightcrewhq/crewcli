@@ -47,14 +47,6 @@ func Do(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int 
 	return 1
 }
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number for Flightcrew's CLI",
-	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Implement this.
-	},
-}
-
 var gcpCmd = &cobra.Command{
 	Use:   "gcp",
 	Short: "Manage Flightcrew for Google Cloud Platform (GCP).",

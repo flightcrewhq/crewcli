@@ -52,22 +52,20 @@ var (
 )
 
 type Inputs struct {
-	tempDir string
-
-	inputKeys        []string
-	inputs           map[string]*wrapinput.Model
-	index            int
-	args             map[string]string
-	replacer         *strings.Replacer
-	confirming       bool
+	tempDir          string
 	defaultHelpText  string
 	description      string
 	requiredHelpText string
 	name             string
 	endDescription   string
+	replacer         *strings.Replacer
+	inputs           map[string]*wrapinput.Model
+	args             map[string]string
+	inputKeys        []string
+	commands         []*command.Model
+	index            int
+	confirming       bool
 	vmIsUp           bool
-
-	commands []*command.Model
 }
 
 func NewInputs(params Params) *Inputs {

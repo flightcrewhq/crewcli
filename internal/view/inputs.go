@@ -54,26 +54,24 @@ type Inputs interface {
 	Commands() []*command.Model
 }
 
-type inputsModel struct {
-	width  int
-	height int
-
-	inputs     Inputs
-	index      int
-	hasErrors  bool
-	confirming bool
-
+type InputsModel struct {
 	submitButton     *button.Button
 	confirmYesButton *button.Button
 	confirmNoButton  *button.Button
 
-	logStatements []string
+	inputs Inputs
+	index  int
+
+	width  int
+	height int
+
+	hasErrors  bool
+	confirming bool
 }
 
-func NewInputsModel(inputs Inputs) inputsModel {
-	m := inputsModel{
-		inputs:        inputs,
-		logStatements: make([]string, 0),
+func NewInputsModel(inputs Inputs) InputsModel {
+	m := InputsModel{
+		inputs: inputs,
 	}
 
 	m.submitButton, _ = button.New("Submit", 12)
@@ -87,11 +85,11 @@ func NewInputsModel(inputs Inputs) inputsModel {
 	return m
 }
 
-func (m inputsModel) Init() tea.Cmd {
+func (m InputsModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m inputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m InputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -194,7 +192,7 @@ func (m inputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, m.inputs.Update(msg)
 }
 
-func (m inputsModel) View() string {
+func (m InputsModel) View() string {
 	var b strings.Builder
 	b.WriteString(m.inputs.View())
 	b.WriteString("\n\n")
@@ -212,14 +210,5 @@ func (m inputsModel) View() string {
 	b.WriteString("\n\n")
 
 	b.WriteString(style.Help("ctrl+c/esc: quit • ←/→/↑/↓: nav • enter: proceed"))
-
-	if len(m.logStatements) > 0 {
-		b.WriteRune('\n')
-		for _, str := range m.logStatements {
-			b.WriteString(str)
-			b.WriteRune('\n')
-		}
-	}
-
 	return b.String()
 }
