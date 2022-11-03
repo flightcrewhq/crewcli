@@ -54,9 +54,9 @@ https://cloud.google.com/iam/docs/creating-managing-service-accounts`,
 		checkIAMRole,
 		command.NewWriteModel(command.Opts{
 			SkipIfSucceed: checkIAMRole,
-			Description:   "This command creates an IAM role from `${IAM_FILE}` for the Flightcrew VM to access configs and monitoring data.\n\nhttps://cloud.google.com/iam/docs/understanding-custom-roles",
+			Description:   "This command creates an IAM role from `${IAM_FILE}` under your GCP organization for the Flightcrew VM to access configs and monitoring data.\n\nhttps://cloud.google.com/iam/docs/understanding-custom-roles",
 			Command: `gcloud iam roles create ${IAM_ROLE} \
-	--project=${GOOGLE_PROJECT_ID} \
+	--organization=${GOOGLE_ORG_ID} \
 	--file=${IAM_FILE}`,
 		}),
 		command.NewWriteModel(command.Opts{
@@ -66,7 +66,7 @@ https://cloud.google.com/iam/docs/creating-managing-service-accounts`,
 https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 			Command: `gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
 	--member=serviceAccount:"${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-	--role="projects/${GOOGLE_PROJECT_ID}/roles/${IAM_ROLE}" \
+	--role="organizations/${GOOGLE_ORG_ID}/roles/${IAM_ROLE}" \
 	--condition=None`,
 		}),
 		checkVMExists,

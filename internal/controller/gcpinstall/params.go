@@ -29,6 +29,7 @@ const (
 
 const (
 	keyProject            = "${GOOGLE_PROJECT_ID}"
+	keyOrgID              = "${GOOGLE_ORG_ID}"
 	keyTowerVersion       = "${TOWER_VERSION}"
 	keyZone               = "${ZONE}"
 	keyVirtualMachine     = "${VIRTUAL_MACHINE}"

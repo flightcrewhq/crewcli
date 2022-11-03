@@ -212,6 +212,16 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 		}
 
 		switch k {
+		case keyProject:
+			projectID := input.Value()
+			orgID, err := gcp.GetOrganizationID(projectID)
+			if setError(err) {
+				break
+			}
+
+			input.SetInfo("found organization ID '" + orgID + "'")
+			ctl.args[keyOrgID] = orgID
+
 		case keyTowerVersion:
 			version, err := gcp.GetTowerImageVersion(input.Value())
 			if setError(err) {
