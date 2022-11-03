@@ -159,7 +159,7 @@ func recreateCommand(m map[string]string) string {
 			switch keyName {
 			case keyPermissions:
 				if val == constants.Read {
-					val = "false"
+					continue
 				} else {
 					val = "true"
 				}
