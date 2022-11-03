@@ -126,3 +126,7 @@ func (ctl RunController) Commands() []*command.Model {
 func (ctl *RunController) GetEndController() controller.End {
 	return NewEndController(ctl.commands)
 }
+
+func (ctl RunController) RecreateCommand() string {
+	return recreateCommand(ctl.args)
+}

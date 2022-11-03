@@ -22,24 +22,24 @@ type RunModel struct {
 	yesButton *button.Button
 	noButton  *button.Button
 
-	inputs    controller.Run
-	paginator paginator.Model
-	index     int
+	controller controller.Run
+	paginator  paginator.Model
+	index      int
 
 	userInput bool
 }
 
-func NewRunModel(inputs controller.Run) *RunModel {
+func NewRunModel(controller controller.Run) *RunModel {
 	debug.Output("New run model time!")
 
 	yesButton, _ := button.New("yes", 10)
 	noButton, _ := button.New("no", 10)
 
 	m := &RunModel{
-		inputs:    inputs,
-		commands:  inputs.Commands(),
-		yesButton: yesButton,
-		noButton:  noButton,
+		controller: controller,
+		commands:   controller.Commands(),
+		yesButton:  yesButton,
+		noButton:   noButton,
 	}
 
 	p := paginator.New()
@@ -66,6 +66,7 @@ func (m *RunModel) Init() tea.Cmd {
 
 func (m *RunModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.index >= len(m.commands) {
+		printRecreatedCommand(m.controller.RecreateCommand())
 		return m, tea.Quit
 	}
 
@@ -139,7 +140,7 @@ func (m *RunModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.(type) {
 		case tea.KeyMsg:
 			if !m.nextCommand() {
-				return NewEndModel(m.inputs.GetEndController()), nil
+				return NewEndModel(m.controller.GetEndController()), nil
 			}
 
 			return m, nil
