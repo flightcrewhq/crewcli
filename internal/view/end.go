@@ -148,12 +148,12 @@ func (m EndModel) printCommands(fn string) error {
 	}
 	defer f.Close()
 
-	f.WriteString(fmt.Sprintf("Output of %s\n\n", m.controller.Name()))
+	_, _ = f.WriteString(fmt.Sprintf("Output of %s\n\n", m.controller.Name()))
 
 	for _, cmd := range m.commands {
-		f.WriteString("--------------------\n")
-		f.WriteString(cmd.String())
-		f.WriteString("\n")
+		_, _ = f.WriteString("--------------------\n")
+		_, _ = f.WriteString(cmd.String())
+		_, _ = f.WriteString("\n")
 	}
 
 	if err := f.Sync(); err != nil {
