@@ -39,6 +39,10 @@ stage: ALPHA
 # for how to read AppEngine versions:
 # https://cloud.google.com/iam/docs/understanding-roles#app-engine-roles
 includedPermissions:
+# Read projects
+- resourcemanager.projects.get
+- resourcemanager.projects.list
+
 # Read the Application config
 - appengine.applications.get
 - appengine.operations.get
@@ -64,6 +68,10 @@ description: Grants Flightcrew's Control Tower VM write access to AppEngine conf
 stage: ALPHA
 # These permissions add to the Read-Only role to deploy new AppEngine versions.
 includedPermissions:
+# Read projects
+- resourcemanager.projects.get
+- resourcemanager.projects.list
+
 # Change the service's traffic splitting:
 - appengine.services.update
 
@@ -96,8 +104,11 @@ stage: ALPHA
 # These permissions are pared down from those specified in the GCP docs:
 # https://cloud.google.com/iam/docs/understanding-roles#compute-engine-roles
 includedPermissions:
+# Read projects
+- resourcemanager.projects.get
+- resourcemanager.projects.list
+
 # Read VM specs and configs
-- compute.projects.get
 - compute.zones.list
 - compute.instances.list
 

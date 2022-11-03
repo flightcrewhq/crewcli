@@ -5,6 +5,10 @@ stage: ALPHA
 # for how to read AppEngine versions:
 # https://cloud.google.com/iam/docs/understanding-roles#app-engine-roles
 includedPermissions:
+# Read projects
+- resourcemanager.projects.get
+- resourcemanager.projects.list
+
 # Read the Application config
 - appengine.applications.get
 - appengine.operations.get
