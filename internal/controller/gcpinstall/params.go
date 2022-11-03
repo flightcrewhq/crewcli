@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"flightcrew.io/cli/internal/constants"
-	"flightcrew.io/cli/internal/gcp"
 	"github.com/spf13/cobra"
 )
 
@@ -95,12 +94,6 @@ func ParseFlags(cmd *cobra.Command) (Params, func(), error) {
 	}
 
 	maybeAddEnv(params.args, keyProject, *projectFlag)
-	if !contains(params.args, keyProject) {
-		if projects, err := gcp.GetProjectsFromEnvironment(); err == nil {
-			maybeAddEnv(params.args, keyProject, strings.Join(projects, ","))
-		}
-	}
-
 	maybeAddEnv(params.args, keyZone, *zoneFlag)
 	maybeAddEnv(params.args, keyTowerVersion, *versionFlag)
 	maybeAddEnv(params.args, keyAPIToken, *tokenFlag)
@@ -155,7 +148,7 @@ func recreateCommand(m map[string]string) string {
 	buf.WriteString(" gcp install")
 
 	for flagName, keyName := range flagToKey {
-		if val, ok := m[keyName]; ok {
+		if val, ok := m[keyName]; ok && len(val) > 0 {
 			switch keyName {
 			case keyPermissions:
 				if val == constants.Read {

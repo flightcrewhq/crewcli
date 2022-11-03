@@ -3,15 +3,16 @@ package gcp
 import (
 	"bytes"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
 )
 
-func GetProjectsFromEnvironment() ([]string, error) {
+func GetProjectFromEnvironment() (string, error) {
 	var stdout, stderr bytes.Buffer
 	if err := bashListProjects(&stdout, &stderr); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	res, err := parseListProjectsCSV(&stdout)
@@ -29,12 +30,11 @@ func bashListProjects(stdout, stderr *bytes.Buffer) error {
 	return nil
 }
 
-func parseListProjectsCSV(output *bytes.Buffer) ([]string, error) {
-	projectIDs := make([]string, 0)
+func parseListProjectsCSV(output *bytes.Buffer) (string, error) {
 	r := csv.NewReader(output)
 	columns, err := r.Read()
 	if err != nil {
-		return nil, fmt.Errorf("no header when reading csv for project list: %w", err)
+		return "", fmt.Errorf("no header when reading csv for project list: %w", err)
 	}
 
 	projectIndex := -1
@@ -46,7 +46,7 @@ func parseListProjectsCSV(output *bytes.Buffer) ([]string, error) {
 	}
 
 	if projectIndex < 0 {
-		return nil, fmt.Errorf("no project_id in csv headers: %+v", columns)
+		return "", fmt.Errorf("no project_id in csv headers: %+v", columns)
 	}
 
 	for {
@@ -56,9 +56,12 @@ func parseListProjectsCSV(output *bytes.Buffer) ([]string, error) {
 		}
 
 		if len(record) > projectIndex {
-			projectIDs = append(projectIDs, record[projectIndex])
+			if len(record[projectIndex]) > 0 {
+				// Limit to only one
+				return record[projectIndex], nil
+			}
 		}
 	}
 
-	return projectIDs, nil
+	return "", errors.New("not found")
 }
