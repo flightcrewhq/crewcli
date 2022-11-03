@@ -97,6 +97,7 @@ stage: ALPHA
 # https://cloud.google.com/iam/docs/understanding-roles#compute-engine-roles
 includedPermissions:
 # Read VM specs and configs
+- compute.projects.get
 - compute.zones.list
 - compute.instances.list
 
