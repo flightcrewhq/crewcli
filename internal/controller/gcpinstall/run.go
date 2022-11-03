@@ -32,7 +32,8 @@ func NewRunController(args map[string]string) *RunController {
 	})
 	checkVMExists := command.NewReadModel(command.Opts{
 		Description: "Check if a Flightcrew VM already exists or needs to be created.",
-		Command:     `gcloud compute instances list --format="csv(NAME,EXTERNAL_IP,STATUS)" --project=${GOOGLE_PROJECT_ID} --zones=${ZONE} | awk -F "," "/${VIRTUAL_MACHINE}/ {print f(2), f(3)} function f(n){return (\$n==\"\" ? \"null\" : \$n)}" | [ $(wc -c) -gt "0" ]`,
+		Command: `gcloud compute instances list --format="csv(NAME,EXTERNAL_IP,STATUS)" \${PROJECT_OR_ORG_FLAG}
+	--zones=${ZONE} | awk -F "," "/${VIRTUAL_MACHINE}/ {print f(2), f(3)} function f(n){return (\$n==\"\" ? \"null\" : \$n)}" | [ $(wc -c) -gt "0" ]`,
 		Message: map[command.State]string{
 			command.PassState: "This Flightcrew VM already exists. Nothing to install.",
 			command.FailState: "No existing VM found. Next step is to create it.",
@@ -54,9 +55,8 @@ https://cloud.google.com/iam/docs/creating-managing-service-accounts`,
 		checkIAMRole,
 		command.NewWriteModel(command.Opts{
 			SkipIfSucceed: checkIAMRole,
-			Description:   "This command creates an IAM role from `${IAM_FILE}` under your GCP organization for the Flightcrew VM to access configs and monitoring data.\n\nhttps://cloud.google.com/iam/docs/understanding-custom-roles",
-			Command: `gcloud iam roles create ${IAM_ROLE} \
-	--organization=${GOOGLE_ORG_ID} \
+			Description:   "This command creates an IAM role from `${IAM_FILE}` for the Flightcrew VM to access configs and monitoring data.\n\nhttps://cloud.google.com/iam/docs/understanding-custom-roles",
+			Command: `gcloud iam roles create ${IAM_ROLE} \${PROJECT_OR_ORG_FLAG}
 	--file=${IAM_FILE}`,
 		}),
 		command.NewWriteModel(command.Opts{
@@ -66,7 +66,7 @@ https://cloud.google.com/iam/docs/creating-managing-service-accounts`,
 https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 			Command: `gcloud projects add-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
 	--member=serviceAccount:"${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-	--role="organizations/${GOOGLE_ORG_ID}/roles/${IAM_ROLE}" \
+	--role="${PROJECT_OR_ORG_SLASH}/roles/${IAM_ROLE}" \
 	--condition=None`,
 		}),
 		checkVMExists,

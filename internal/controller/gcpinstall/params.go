@@ -29,7 +29,6 @@ const (
 
 const (
 	keyProject            = "${GOOGLE_PROJECT_ID}"
-	keyOrgID              = "${GOOGLE_ORG_ID}"
 	keyTowerVersion       = "${TOWER_VERSION}"
 	keyZone               = "${ZONE}"
 	keyVirtualMachine     = "${VIRTUAL_MACHINE}"
@@ -46,6 +45,8 @@ const (
 	keyTempDir            = "${TEMP_DIR}"
 	keyGAEMaxVersionCount = "${GAE_MAX_VERSION_COUNT}"
 	keyGAEMaxVersionAge   = "${GAE_MAX_VERSION_AGE}"
+	keyProjectOrOrgFlag   = "${PROJECT_OR_ORG_FLAG}"
+	keyProjectOrOrgSlash  = "${PROJECT_OR_ORG_SLASH}"
 )
 
 var (

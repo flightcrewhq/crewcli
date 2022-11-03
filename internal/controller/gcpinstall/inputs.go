@@ -80,6 +80,8 @@ func NewInputsController(params Params) *InputsController {
 	ctl.args[keyGAEMaxVersionAge] = ""
 	ctl.args[keyGAEMaxVersionCount] = ""
 	ctl.args[keyImagePath] = gcp.ImagePath
+	ctl.args[keyProjectOrOrgFlag] = ""
+	ctl.args[keyProjectOrOrgSlash] = ""
 
 	for _, key := range allKeys {
 		var input wrapinput.Model
@@ -215,12 +217,15 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 		case keyProject:
 			projectID := input.Value()
 			orgID, err := gcp.GetOrganizationID(projectID)
-			if setError(err) {
-				break
+			if err != nil {
+				input.SetInfo("no organization found")
+				ctl.args[keyProjectOrOrgFlag] = fmtFlagForReplace("project", projectID)
+				ctl.args[keyProjectOrOrgSlash] = fmt.Sprintf(`projects/%s`, projectID)
+			} else {
+				input.SetInfo("found organization ID '" + orgID + "'")
+				ctl.args[keyProjectOrOrgFlag] = fmtFlagForReplace("organization", orgID)
+				ctl.args[keyProjectOrOrgSlash] = fmt.Sprintf(`organization/%s`, orgID)
 			}
-
-			input.SetInfo("found organization ID '" + orgID + "'")
-			ctl.args[keyOrgID] = orgID
 
 		case keyTowerVersion:
 			version, err := gcp.GetTowerImageVersion(input.Value())
@@ -282,8 +287,7 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 			}
 
 			if permission == constants.Write {
-				ctl.args[keyTrafficRouter] = fmt.Sprintf(`
-	--container-env=TRAFFIC_ROUTER=%s \`, platform)
+				ctl.args[keyTrafficRouter] = fmtContainerEnvForReplace("TRAFFIC_ROUTER", platform)
 			} else {
 				ctl.args[keyTrafficRouter] = ""
 			}
@@ -308,8 +312,7 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 			}
 
 			input.SetInfo("")
-			input.SetConverted(fmt.Sprintf(`
-	--container-env=APPENGINE_MAX_VERSION_COUNT=%d \`, numMaxVersions))
+			input.SetConverted(fmtContainerEnvForReplace("APPENGINE_MAX_VERSION_COUNT", fmt.Sprintf("%d", numMaxVersions)))
 
 		case keyGAEMaxVersionAge:
 			value := input.Value()
@@ -329,8 +332,7 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 			}
 
 			input.SetInfo(converted)
-			input.SetConverted(fmt.Sprintf(`
-	--container-env=APPENGINE_MAX_VERSION_AGE=%s \`, converted))
+			input.SetConverted(fmtContainerEnvForReplace("APPENGINE_MAX_VERSION_AGE", converted))
 
 		}
 	}
@@ -379,4 +381,17 @@ func (ctl *InputsController) RecreateCommand() string {
 func contains(m map[string]string, key string) bool {
 	_, ok := m[key]
 	return ok
+}
+
+func fmtContainerEnvForReplace(env string, value string) string {
+	return fmtForReplace(fmt.Sprintf(`--container-env="%s=%s"`, env, value))
+}
+
+func fmtFlagForReplace(flag string, value string) string {
+	return fmtForReplace(fmt.Sprintf(`--%s=%s`, flag, value))
+}
+
+func fmtForReplace(value string) string {
+	return fmt.Sprintf(`
+	%s \`, value)
 }
