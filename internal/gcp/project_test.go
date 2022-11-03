@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseProjectsCSV(mainT *testing.T) {
+func TestParseprojectCSV(mainT *testing.T) {
 	mainT.Run("parse valid csv should succeed", func(t *testing.T) {
 		buf := bytes.NewBufferString(`project_id
 project-1
@@ -15,14 +15,9 @@ some-project
 yeah
 123-project
 `)
-		projects, err := parseListProjectsCSV(buf)
+		project, err := parseListProjectsCSV(buf)
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, []string{
-			"project-1",
-			"some-project",
-			"yeah",
-			"123-project",
-		}, projects)
+		assert.Equal(t, "project-1", project)
 	})
 
 	mainT.Run("parse empty csv should fail", func(t *testing.T) {
@@ -31,12 +26,11 @@ yeah
 		assert.Error(t, err)
 	})
 
-	mainT.Run("parse valid empty csv should succeed", func(t *testing.T) {
+	mainT.Run("parse valid empty csv should error", func(t *testing.T) {
 		buf := bytes.NewBufferString(`project_id
 `)
-		projects, err := parseListProjectsCSV(buf)
-		assert.NoError(t, err)
-		assert.Empty(t, projects)
+		_, err := parseListProjectsCSV(buf)
+		assert.Error(t, err)
 	})
 
 	mainT.Run("parse variable entries should succeed", func(t *testing.T) {
@@ -44,12 +38,9 @@ yeah
 ,project-1
 123,project-2
 	`)
-		projects, err := parseListProjectsCSV(buf)
+		project, err := parseListProjectsCSV(buf)
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, []string{
-			"project-1",
-			"project-2",
-		}, projects)
+		assert.Equal(t, "project-1", project)
 	})
 
 	mainT.Run("parse invalid csv should error", func(t *testing.T) {

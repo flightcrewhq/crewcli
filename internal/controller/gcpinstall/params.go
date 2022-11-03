@@ -148,7 +148,7 @@ func recreateCommand(m map[string]string) string {
 	buf.WriteString(" gcp install")
 
 	for flagName, keyName := range flagToKey {
-		if val, ok := m[keyName]; ok {
+		if val, ok := m[keyName]; ok && len(val) > 0 {
 			switch keyName {
 			case keyPermissions:
 				if val == constants.Read {

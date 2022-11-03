@@ -94,10 +94,8 @@ func NewInputsController(params Params) *InputsController {
 			input = wrapinput.NewFreeForm()
 			input.Freeform.CharLimit = 0
 			input.Freeform.Placeholder = "project-id-1234"
-			if projects, err := gcp.GetProjectsFromEnvironment(); err == nil {
-				if projectsStr := strings.Join(projects, ","); len(projectsStr) > 0 {
-					input.Freeform.Placeholder = projectsStr
-				}
+			if project, err := gcp.GetProjectFromEnvironment(); err == nil && len(project) > 0 {
+				input.Freeform.Placeholder = project
 			}
 			input.Title = "Project ID"
 			input.HelpText = "Project ID is the unique string identifier for your Google Cloud Platform project."
