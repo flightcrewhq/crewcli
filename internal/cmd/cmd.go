@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -57,6 +58,18 @@ var gcpInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install a Flightcrew tower into Google Cloud Platform (GCP).",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if !gcp.HasGcloudInPath() {
+			fmt.Printf(`The "gcloud" CLI tool is a pre-requisite to run this script.
+
+If you haven't yet, please install the tool: https://cloud.google.com/sdk/docs/install
+
+If you already have, please add it to your path:
+  export PATH=<where it is>:$PATH
+
+`)
+			return errors.New("gcloud is not in path")
+		}
+
 		if err := gcp.InitArtifactRegistry(); err != nil {
 			return fmt.Errorf("init artifact registry: %w", err)
 		}
