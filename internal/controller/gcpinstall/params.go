@@ -82,8 +82,8 @@ type Params struct {
 func RegisterFlags(cmd *cobra.Command) {
 	tokenFlag = cmd.Flags().StringP(flagToken, "t", "", "The Flightcrew API token to identify your organization.")
 	versionFlag = cmd.Flags().StringP(flagTowerVersion, "v", "stable", "The Flightcrew image version to install.")
-	vmFlag = cmd.Flags().String("vm", "flightcrew-control-tower", "The name of the VM that will be created for the Flightcrew tower in your project.")
-	writeFlag = cmd.Flags().BoolP("write", "w", false, "Whether the Flightcrew tower should be read-only (false) or read-write (true).")
+	vmFlag = cmd.Flags().String(flagVirtualMachine, "flightcrew-control-tower", "The name of the VM that will be created for the Flightcrew tower in your project.")
+	writeFlag = cmd.Flags().BoolP(flagWrite, "w", false, "Whether the Flightcrew tower should be read-only (false) or read-write (true).")
 	projectFlag = cmd.Flags().StringP(flagProject, "p", "", "Specify your Google Project ID.")
 	zoneFlag = cmd.Flags().StringP(flagZone, "l", "us-central1-c", "The zone to put your Tower in.")
 	platformFlag = cmd.Flags().String(flagPlatform, "gae_std", "specify what type of cloud resources you want to manage. ('gae_std' for App Engine, 'gce' for Compute Engine)")
