@@ -7,14 +7,20 @@ This is the command line interface for installing Flightcrew.
 ## Get Started
 
 1. Specify where you'd like `crewcli` to exist.
-2. Run the bootstrap script to download the latest release and verify that the checksums match.
+2. Run the bootstrap script to download the latest release and verify that the checksums match. \
+   Depending on where you want to download to, you may need `sudo` to write the binary there.
 
    To inspect the contents, go to <https://github.com/flightcrewhq/crewcli/blob/main/bootstrap.sh/>
 
 ```sh
-# Where you'd like crewcli to be installed.
+# with sudo
 export OUTDIR=/usr/local/bin
-# Please look at the file before you run it.
+curl --location https://raw.githubusercontent.com/flightcrewhq/crewcli/main/bootstrap.sh | sudo OUTDIR=${OUTDIR} bash
+```
+
+```sh
+# no sudo
+export OUTDIR=./bin
 curl --location https://raw.githubusercontent.com/flightcrewhq/crewcli/main/bootstrap.sh | bash
 ```
 
@@ -30,4 +36,4 @@ For Kubernetes, please use our Helm chart. Reach out to sam@flightcrew.io for ac
 
 For help, reach out to support@flightcrew.io.
 
-Sign up to our newsletter at <https://flightcrew.io/>!
+Sign up for our newsletter at <https://flightcrew.io/>!
