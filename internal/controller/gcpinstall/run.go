@@ -9,15 +9,11 @@ import (
 
 type RunController struct {
 	args     map[string]string
+	replacer *strings.Replacer
 	commands []*command.Model
 }
 
 func NewRunController(args map[string]string) *RunController {
-	replaceArgs := make([]string, 0, 2*len(args))
-	for key, arg := range args {
-		replaceArgs = append(replaceArgs, key, arg)
-	}
-
 	checkServiceAccount := command.NewReadModel(command.Opts{
 		Description: "Check if a Flightcrew service account already exists or needs to be created.",
 		Command:     `gcloud iam service-accounts describe --project="${GOOGLE_PROJECT_ID}" "${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" > /dev/null 2>&1`,
@@ -83,18 +79,18 @@ https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 	--container-image="${IMAGE_PATH}:${TOWER_VERSION}" \
 	--container-arg="--debug=true" \
 	--container-env="FC_API_KEY=${API_TOKEN}" \
-	--container-env=CLOUD_PLATFORM=${PLATFORM} \${TRAFFIC_ROUTER}${GAE_MAX_VERSION_COUNT}${GAE_MAX_VERSION_AGE}
-	--container-env=FC_PACKAGE_VERSION=${TOWER_VERSION} \
-	--container-env=METRIC_PROVIDERS=stackdriver \
-	--container-env=FC_RPC_CONNECT_HOST=${RPC_HOST} \
-	--container-env=FC_RPC_CONNECT_PORT=443 \
-	--container-env=FC_TOWER_PORT=8080 \
-	--label=component=flightcrew \
-	--machine-type=e2-micro \
-	--scopes=cloud-platform \
+	--container-env="CLOUD_PLATFORM=${PLATFORM}" \${TRAFFIC_ROUTER}${GAE_MAX_VERSION_COUNT}${GAE_MAX_VERSION_AGE}
+	--container-env="FC_PACKAGE_VERSION=${TOWER_VERSION}" \
+	--container-env="METRIC_PROVIDERS=stackdriver" \
+	--container-env="FC_RPC_CONNECT_HOST=${RPC_HOST}" \
+	--container-env="FC_RPC_CONNECT_PORT=443" \
+	--container-env="FC_TOWER_PORT=8080" \
+	--labels="component=flightcrew" \
+	--machine-type="e2-micro" \
+	--scopes="cloud-platform" \
 	--service-account="${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-	--tags=http-server \
-	--zone=${ZONE}`,
+	--tags="http-server" \
+	--zone="${ZONE}"`,
 		}),
 		command.NewWriteModel(command.Opts{
 			SkipIfSucceed: checkVMExists,
@@ -108,6 +104,11 @@ https://serverfault.com/questions/980569/disable-fluentd-on-on-container-optimiz
 		}),
 	}
 
+	replaceArgs := make([]string, 0, 2*len(args))
+	for key, arg := range args {
+		replaceArgs = append(replaceArgs, key, arg)
+	}
+
 	replacer := strings.NewReplacer(replaceArgs...)
 	for _, cmd := range commands {
 		cmd.Replace(replacer)
@@ -115,6 +116,7 @@ https://serverfault.com/questions/980569/disable-fluentd-on-on-container-optimiz
 
 	return &RunController{
 		args:     args,
+		replacer: replacer,
 		commands: commands,
 	}
 }
@@ -124,5 +126,9 @@ func (ctl RunController) Commands() []*command.Model {
 }
 
 func (ctl *RunController) GetEndController() controller.End {
-	return NewEndController(ctl.commands)
+	return NewEndController(ctl.commands, ctl.replacer)
+}
+
+func (ctl RunController) RecreateCommand() string {
+	return recreateCommand(ctl.args)
 }

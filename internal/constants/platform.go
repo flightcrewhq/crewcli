@@ -108,3 +108,29 @@ includedPermissions:
 		},
 	}
 )
+
+func GetPlatformKey(text string) string {
+	if _, ok := KeyToDisplay[text]; ok {
+		return text
+	}
+
+	if _, ok := DisplayToPlatform[text]; ok {
+		for key, display := range KeyToDisplay {
+			if display == text {
+				return key
+			}
+		}
+	}
+
+	for display, platform := range DisplayToPlatform {
+		if platform == text {
+			for key, maybeDisplay := range KeyToDisplay {
+				if display == maybeDisplay {
+					return key
+				}
+			}
+		}
+	}
+
+	return ""
+}

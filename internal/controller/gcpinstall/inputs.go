@@ -342,19 +342,25 @@ func (ctl InputsController) GetName() string {
 func (ctl *InputsController) GetInputs() []*wrapinput.Model {
 	platformInput := ctl.inputs[keyPlatform]
 	permissionsInput := ctl.inputs[keyPermissions]
-	var keys []string
 	if platformInput.Radio.Value() == constants.GoogleAppEngineStdDisplay &&
 		permissionsInput.Radio.Value() == constants.Write {
-		keys = writeAppEngineInputKeys
+		ctl.inputKeys = writeAppEngineInputKeys
 	} else {
-		keys = initialInputKeys
+		ctl.inputKeys = initialInputKeys
 	}
 
-	inputs := make([]*wrapinput.Model, 0, len(keys))
-	for _, k := range keys {
+	inputs := make([]*wrapinput.Model, 0, len(ctl.inputKeys))
+	for _, k := range ctl.inputKeys {
 		inputs = append(inputs, ctl.inputs[k])
 	}
 	return inputs
+}
+
+func (ctl *InputsController) RecreateCommand() string {
+	for _, key := range ctl.inputKeys {
+		ctl.args[key] = ctl.inputs[key].Value()
+	}
+	return recreateCommand(ctl.args)
 }
 
 func contains(m map[string]string, key string) bool {

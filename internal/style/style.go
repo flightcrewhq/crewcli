@@ -51,6 +51,7 @@ func init() {
 		glamour.WithAutoStyle(),
 		glamour.WithEmoji(),
 		glamour.WithWordWrap(100),
+		glamour.WithPreservedNewLines(),
 	)
 
 	if err != nil {

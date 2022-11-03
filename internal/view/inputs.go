@@ -1,6 +1,7 @@
 package view
 
 import (
+	"fmt"
 	"strings"
 
 	"flightcrew.io/cli/internal/controller"
@@ -110,6 +111,13 @@ func (m InputsModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+func printRecreatedCommand(cmd string) {
+	fmt.Println()
+	fmt.Println()
+	fmt.Println("To return to the same values:")
+	fmt.Println(cmd)
+}
+
 func (m InputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -121,6 +129,7 @@ func (m InputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		oldIndex := m.index
 		switch s := msg.String(); s {
 		case "ctrl+c", "esc":
+			printRecreatedCommand(m.controller.RecreateCommand())
 			return m, tea.Quit
 
 		// Set focus to next input
@@ -237,6 +246,7 @@ func (m *InputsModel) updateInput(msg tea.Msg) tea.Cmd {
 }
 
 func (m *InputsModel) moveToNextEmptyInput() {
+	m.index++
 	for ; m.index < len(m.inputs); m.index++ {
 		if len(m.inputs[m.index].Value()) == 0 {
 			break

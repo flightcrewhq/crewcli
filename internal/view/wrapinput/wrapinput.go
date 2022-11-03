@@ -23,7 +23,6 @@ type Model struct {
 	Title    string
 	HelpText string
 	Default  string
-	// If the value is to be converted, this is only valid when model.confirming is true.
 
 	validation ValidateParams
 	validating bool
@@ -63,12 +62,7 @@ func (m Model) View(params ViewParams) string {
 	b.WriteString(": ")
 
 	if params.ShowValue {
-		if m.Radio != nil {
-			b.WriteString(m.Radio.Value())
-		} else {
-			b.WriteString(m.Freeform.Value())
-		}
-
+		b.WriteString(m.Value())
 		if len(m.validation.ErrorMessage) > 0 {
 			b.WriteString(" ❗️ ")
 			b.WriteString(style.Error(m.validation.ErrorMessage))
@@ -81,7 +75,6 @@ func (m Model) View(params ViewParams) string {
 			b.WriteString(" → ")
 			b.WriteString(style.Convert(m.validation.Converted))
 		}
-
 	} else {
 		if m.Radio != nil {
 			b.WriteString(m.Radio.View())

@@ -16,9 +16,10 @@ type EndController struct {
 	vmIsUp         bool
 }
 
-func NewEndController(commands []*command.Model) *EndController {
+func NewEndController(commands []*command.Model, replacer *strings.Replacer) *EndController {
 	return &EndController{
 		commands: commands,
+		replacer: replacer,
 	}
 }
 
@@ -50,24 +51,26 @@ func (ctl *EndController) EndDescription() string {
 		return ctl.endDescription
 	}
 
-	var description = `## 🕊  Welcome to Flightcrew!
+	var link = "https://console.cloud.google.com/compute/instancesDetail/zones/${ZONE}/instances/${VIRTUAL_MACHINE}?project=${GOOGLE_PROJECT_ID}"
+	var description = `## Welcome to Flightcrew! 🕊
 
 ${MESSAGE}
 
 See your VM in the console:
-https://console.cloud.google.com/compute/instancesDetail/zones/${ZONE}/instances/${VIRTUAL_MACHINE}?project=${GOOGLE_PROJECT_ID}
+http://replace.me
 
 Alternatively, see your new VM in action:
 ${CODE_START}
 # SSH into the created VM.
 gcloud compute ssh ${VIRTUAL_MACHINE} --project ${GOOGLE_PROJECT_ID} --zone ${ZONE}
 # Follow the new container's logs.
-docker logs --follow \$(docker ps -f name=tower --format=\"{{.ID}}\")
+docker logs --follow $(docker ps -f name="${IMAGE_PATH}:${TOWER_VERSION}" --format="{{.ID}}")
 ${CODE_END}
 
-Head on over to ${APP_URL} to see the info your Tower collected.
+Once your Tower is up, head on over to ${APP_URL} to see the info your Tower collected.
 `
 
+	link = ctl.replacer.Replace(link)
 	description = ctl.replacer.Replace(description)
 	description = strings.Replace(description, "${CODE_START}", "```sh", 1)
 	description = strings.Replace(description, "${CODE_END}", "```", 1)
@@ -78,5 +81,7 @@ Head on over to ${APP_URL} to see the info your Tower collected.
 	}
 
 	out, _ := style.Glamour.Render(description)
+	out = strings.Replace(out, "http://replace.me", link, 1)
+
 	return out
 }
