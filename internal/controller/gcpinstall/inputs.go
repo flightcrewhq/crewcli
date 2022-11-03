@@ -121,6 +121,7 @@ func NewInputsController(params Params) *InputsController {
 		case keyTowerVersion:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "stable"
+			input.Freeform.CharLimit = 32
 			input.Title = "Tower Version"
 			input.HelpText = "Tower Version is the version of the Tower image that will be installed. (recommended: `stable`)"
 			maybeSetValue(keyTowerVersion)
@@ -128,6 +129,7 @@ func NewInputsController(params Params) *InputsController {
 		case keyAPIToken:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "api-token"
+			input.Freeform.CharLimit = 0
 			input.Title = "API Token"
 			input.Required = true
 			input.HelpText = "API token is the value provided by Flightcrew to identify your organization."
@@ -136,6 +138,7 @@ func NewInputsController(params Params) *InputsController {
 		case keyIAMServiceAccount:
 			input = wrapinput.NewFreeForm()
 			input.Title = "Service Account"
+			input.Freeform.CharLimit = 64
 			input.Default = "flightcrew-runner"
 			input.SetValue("flightcrew-runner")
 			input.HelpText = "Service Account is the name of the (to be created) IAM service account to run the Flightcrew Tower."
