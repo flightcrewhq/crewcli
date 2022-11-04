@@ -44,6 +44,8 @@ const (
 	keyTempDir            = "${TEMP_DIR}"
 	keyGAEMaxVersionCount = "${GAE_MAX_VERSION_COUNT}"
 	keyGAEMaxVersionAge   = "${GAE_MAX_VERSION_AGE}"
+	keyProjectOrOrgFlag   = "${PROJECT_OR_ORG_FLAG}"
+	keyProjectOrOrgSlash  = "${PROJECT_OR_ORG_SLASH}"
 )
 
 var (

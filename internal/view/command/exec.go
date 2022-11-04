@@ -42,13 +42,24 @@ func (wc *WrappedCommand) SetStderr(w io.Writer) {
 	wc.cmd.Stderr = io.MultiWriter(w, &wc.combinedOutput)
 }
 
-var (
-	cmdReplacer = strings.NewReplacer(
-		`\\n`, "",
-		"\t", " ",
-	)
-)
-
+// sanitizeForExec takes a command that can be formatted as something like this:
+//
+//	./script arg1 \
+//	 --flag2=value2 \
+//	 --flag3 value3
+//
+// and converts it into a single line. Newlines (even with the backslash) being
+// passed into exec.Command() are read in as separate commands, so we need to
+// reformat the commands.
+//
+// The output would be
+//
+//	./script arg1 --flag2=value2 --flag3 value3
 func sanitizeForExec(cmd string) string {
-	return cmdReplacer.Replace(cmd)
+	lines := strings.Split(cmd, "\n")
+	for i, line := range lines {
+		lines[i] = strings.Trim(line, "\\ \t")
+	}
+
+	return strings.Join(lines, " ")
 }

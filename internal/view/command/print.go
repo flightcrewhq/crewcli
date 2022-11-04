@@ -8,7 +8,7 @@ func (m Model) String() string {
 	var out strings.Builder
 	out.WriteString(m.opts.Description)
 	out.WriteString("\n\n```sh\n")
-	out.WriteString(m.opts.Command)
+	out.WriteString(sanitizeForExec(m.opts.Command))
 	out.WriteString("\n```\n\n")
 
 	switch m.state {
