@@ -3,10 +3,6 @@ description: Grants Flightcrew's Control Tower VM write access to AppEngine conf
 stage: ALPHA
 # These permissions add to the Read-Only role to deploy new AppEngine versions.
 includedPermissions:
-# Read projects
-- resourcemanager.projects.get
-- resourcemanager.projects.list
-
 # Change the service's traffic splitting:
 - appengine.services.update
 
