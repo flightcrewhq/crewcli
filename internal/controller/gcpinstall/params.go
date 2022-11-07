@@ -32,9 +32,11 @@ const (
 	keyZone               = "${ZONE}"
 	keyVirtualMachine     = "${VIRTUAL_MACHINE}"
 	keyAPIToken           = "${API_TOKEN}"
-	keyIAMRole            = "${IAM_ROLE}"
 	keyIAMServiceAccount  = "${SERVICE_ACCOUNT}"
-	keyIAMFile            = "${IAM_FILE}"
+	keyIAMRoleRead        = "${READ_IAM_ROLE}"
+	keyIAMFileRead        = "${READ_IAM_FILE}"
+	keyIAMRoleWrite       = "${WRITE_IAM_ROLE}"
+	keyIAMFileWrite       = "${WRITE_IAM_FILE}"
 	keyPermissions        = "${PERMISSIONS}"
 	keyRPCHost            = "${RPC_HOST}"
 	keyAppURL             = "${APP_URL}"
@@ -118,10 +120,11 @@ func ParseFlags(cmd *cobra.Command) (Params, func(), error) {
 
 	maybeAddEnv(params.args, keyPlatform, displayName)
 
-	dir, err := os.MkdirTemp("", "flightcrew-gcp-install-*")
+	dir, err := os.MkdirTemp("/tmp", "flightcrew-gcp-install-*")
 	if err != nil {
 		return Params{}, nil, fmt.Errorf("create temp dir for installation: %v", err)
 	}
+	params.tempDir = dir
 
 	return params, func() {
 		err = os.RemoveAll(dir)

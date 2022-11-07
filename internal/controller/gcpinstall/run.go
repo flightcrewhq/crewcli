@@ -74,55 +74,64 @@ https://cloud.google.com/iam/docs/creating-managing-service-accounts`,
 }
 
 func getIAMRoleCommands(args map[string]string) []*command.Model {
-	checkIAMRole := command.NewReadModel(command.Opts{
-		Description: "Check if a Flightcrew IAM Role already exists or needs to be created.",
-		Command:     `gcloud iam roles describe --project="${GOOGLE_PROJECT_ID}" "${IAM_ROLE}" >/dev/null 2>&1`,
-		Message: map[command.State]string{
-			command.PassState: "This Flightcrew IAM role already exists.",
-			command.FailState: "No IAM role found. Next step is to create one.",
-		},
-	})
-	// TODO: Create the read-only
-	commands := []*command.Model{
-		checkIAMRole,
-		command.NewWriteModel(command.Opts{
-			SkipIfSucceed: checkIAMRole,
-			Description:   "This command creates an IAM role from `${IAM_FILE}` for the Flightcrew VM to access configs and monitoring data.\n\nhttps://cloud.google.com/iam/docs/understanding-custom-roles",
-			Command: `gcloud iam roles create ${IAM_ROLE} \${PROJECT_OR_ORG_FLAG}
-	--file=${IAM_FILE}`,
-		}),
-		command.NewWriteModel(command.Opts{
-			SkipIfSucceed: checkIAMRole,
-			Description: `This command attaches the IAM role to Flightcrew's service account, which will give the IAM permissions to a new VM.
+	newCheckIAMRole := func(replacer *strings.Replacer) *command.Model {
+		cmd := command.NewReadModel(command.Opts{
+			Description: "Check if a ${PERMISSIONS} Flightcrew IAM Role already exists or needs to be created.",
+			Command: `gcloud iam roles describe \${PROJECT_OR_ORG_FLAG}
+	"${ROLE}" >/dev/null 2>&1`,
+			Message: map[command.State]string{
+				command.PassState: "This Flightcrew IAM role already exists.",
+				command.FailState: "No IAM role found. Next step is to create one.",
+			},
+		})
+		cmd.Replace(replacer)
+		return cmd
+	}
+	newCreateIAMRole := func(replacer *strings.Replacer, skipIfSucceed *command.Model) *command.Model {
+		cmd := command.NewWriteModel(command.Opts{
+			SkipIfSucceed: skipIfSucceed,
+			Description:   "This command creates a ${PERMISSIONS} IAM role from `${FILE}` for the Flightcrew VM to access configs and monitoring data.\n\nhttps://cloud.google.com/iam/docs/understanding-custom-roles",
+			Command: `gcloud iam roles create ${ROLE} \${PROJECT_OR_ORG_FLAG}
+	--file=${FILE}`,
+		})
+		cmd.Replace(replacer)
+		return cmd
+	}
+	newAttachPolicy := func(replacer *strings.Replacer, skipIfSucceed *command.Model) *command.Model {
+		cmd := command.NewWriteModel(command.Opts{
+			SkipIfSucceed: skipIfSucceed,
+			Description: `This command attaches the ${PERMISSIONS} IAM role to Flightcrew's service account, which will give the attached permissions to a new VM.
 
 https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 			Command: `gcloud projects get-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
 	--member=serviceAccount:"${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-	--role="${PROJECT_OR_ORG_SLASH}/roles/${IAM_ROLE}" \
+	--role="${PROJECT_OR_ORG_SLASH}/roles/${ROLE}" \
 	--condition=None`,
-		}),
+		})
+		cmd.Replace(replacer)
+		return cmd
 	}
 
-	// TODOThen create the write
-	if args[keyPermissions] == constants.Write {
-		commands = append(commands,
-			command.NewWriteModel(command.Opts{
-				SkipIfSucceed: checkIAMRole,
-				Description:   "This command creates an IAM role from `${IAM_FILE}` for the Flightcrew VM to access configs and monitoring data.\n\nhttps://cloud.google.com/iam/docs/understanding-custom-roles",
-				Command: `gcloud iam roles create ${IAM_ROLE} \${PROJECT_OR_ORG_FLAG}
-		--file=${IAM_FILE}`,
-			}),
-			command.NewWriteModel(command.Opts{
-				SkipIfSucceed: checkIAMRole,
-				Description: `This command attaches the IAM role to Flightcrew's service account, which will give the IAM permissions to a new VM.
+	commands := make([]*command.Model, 0)
 
-	https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
-				Command: `gcloud projects get-iam-policy-binding "${GOOGLE_PROJECT_ID}" \
-		--member=serviceAccount:"${SERVICE_ACCOUNT}@${GOOGLE_PROJECT_ID}.iam.gserviceaccount.com" \
-		--role="${PROJECT_OR_ORG_SLASH}/roles/${IAM_ROLE}" \
-		--condition=None`,
-			}),
-		)
+	readReplacer := strings.NewReplacer(
+		"${ROLE}", args[keyIAMRoleRead],
+		"${FILE}", args[keyIAMFileRead],
+		"${PERMISSIONS}", constants.Read)
+	checkReadIAMRole := newCheckIAMRole(readReplacer)
+	commands = append(commands, checkReadIAMRole)
+	commands = append(commands, newCreateIAMRole(readReplacer, checkReadIAMRole))
+	commands = append(commands, newAttachPolicy(readReplacer, checkReadIAMRole))
+
+	if args[keyPermissions] == constants.Write {
+		writeReplacer := strings.NewReplacer(
+			"${ROLE}", args[keyIAMRoleWrite],
+			"${FILE}", args[keyIAMFileWrite],
+			"${PERMISSIONS}", constants.Write)
+		checkWriteIAMRole := newCheckIAMRole(writeReplacer)
+		commands = append(commands, checkWriteIAMRole)
+		commands = append(commands, newCreateIAMRole(writeReplacer, checkWriteIAMRole))
+		commands = append(commands, newAttachPolicy(writeReplacer, checkWriteIAMRole))
 	}
 
 	return commands

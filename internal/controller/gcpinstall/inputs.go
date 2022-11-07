@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -271,32 +272,32 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 			}
 
 			permission := input.Value()
-			permSettings, ok := perms[permission]
-			if !ok {
+			if _, ok := perms[permission]; !ok {
 				setError(fmt.Errorf("%s permissions are not supported for platform '%s'", permission, platformInput.Value()))
 				break
 			}
 
-			f, err := os.CreateTemp(ctl.tempDir, filenameReplacer.Replace(fmt.Sprintf("%s_%s", permission, platform)))
-			if err != nil {
-				setError(fmt.Errorf("failed to create temp file to put permissions YAML"))
-				break
-			}
-			defer f.Close()
-
-			if _, err := f.WriteString(permSettings.Content); err != nil {
-				setError(fmt.Errorf("failed to write permissions YAML to temp file: %w", err))
+			var err error
+			readSettings := perms[constants.Read]
+			ctl.args[keyIAMRoleRead] = readSettings.Role
+			ctl.args[keyIAMFileRead], err = ctl.createFileWithContents(platform, constants.Read, readSettings.Content, "yaml")
+			if setError(err) {
 				break
 			}
 
 			if permission == constants.Write {
+				writeSettings := perms[constants.Write]
 				ctl.args[keyTrafficRouter] = fmtContainerEnvForReplace("TRAFFIC_ROUTER", platform)
+				ctl.args[keyIAMRoleWrite] = writeSettings.Role
+				ctl.args[keyIAMFileWrite], err = ctl.createFileWithContents(platform, constants.Write, writeSettings.Content, "yaml")
+				if setError(err) {
+					break
+				}
 			} else {
 				ctl.args[keyTrafficRouter] = ""
+				ctl.args[keyIAMRoleWrite] = ""
+				ctl.args[keyIAMFileWrite] = ""
 			}
-			ctl.args[keyIAMFile] = f.Name()
-			ctl.args[keyIAMRole] = permSettings.Role
-			input.SetInfo(fmt.Sprintf("see %s", f.Name()))
 
 		case keyGAEMaxVersionCount:
 			value := input.Value()
@@ -397,4 +398,23 @@ func fmtFlagForReplace(flag string, value string) string {
 func fmtForReplace(value string) string {
 	return fmt.Sprintf(`
 	%s \`, value)
+}
+
+func (ctl *InputsController) createFileWithContents(platform string, permissions string, contents string, extension string) (string, error) {
+	fn := filepath.Join(ctl.tempDir, filenameReplacer.Replace(fmt.Sprintf("%s_%s.%s", permissions, platform, extension)))
+	if _, err := os.Stat(fn); err == nil {
+		return fn, nil
+	}
+
+	f, err := os.Create(fn)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	if _, err := f.WriteString(contents); err != nil {
+		return "", err
+	}
+
+	return f.Name(), nil
 }

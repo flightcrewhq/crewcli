@@ -62,7 +62,15 @@ func (m Model) View(params ViewParams) string {
 	b.WriteString(": ")
 
 	if params.ShowValue {
-		b.WriteString(m.Value())
+		if m.Radio != nil {
+			b.WriteString(m.Radio.Value())
+		} else if m.Freeform != nil {
+			if val := m.Freeform.Value(); len(val) > 0 {
+				b.WriteString(m.Freeform.Value())
+			} else {
+				b.WriteString(m.Default)
+			}
+		}
 		if len(m.validation.ErrorMessage) > 0 {
 			b.WriteString(" ❗️ ")
 			b.WriteString(style.Error(m.validation.ErrorMessage))
