@@ -39,6 +39,10 @@ stage: ALPHA
 # for how to read AppEngine versions:
 # https://cloud.google.com/iam/docs/understanding-roles#app-engine-roles
 includedPermissions:
+# Read projects
+- resourcemanager.projects.get
+- resourcemanager.projects.list
+
 # Read the Application config
 - appengine.applications.get
 - appengine.operations.get
@@ -96,6 +100,10 @@ stage: ALPHA
 # These permissions are pared down from those specified in the GCP docs:
 # https://cloud.google.com/iam/docs/understanding-roles#compute-engine-roles
 includedPermissions:
+# Read projects
+- resourcemanager.projects.get
+- resourcemanager.projects.list
+
 # Read VM specs and configs
 - compute.zones.list
 - compute.instances.list
