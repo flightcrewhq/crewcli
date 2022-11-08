@@ -28,7 +28,14 @@ curl --location https://raw.githubusercontent.com/flightcrewhq/crewcli/main/boot
 
 `crewcli` currently supports Google Cloud Platform.
 
-To use, run `crewcli gcp install` to get started. This will start up an interactive terminal to get you set up.
+To use, run `crewcli gcp install` or `crewcli gcp upgrade` to get started. This will start up an interactive terminal to get you set up.
+
+Commands that modify your GCP state will NOT be run until user permission is given. However, some commands to get additional details to make the process smoother may be run. Nothing is being logged.
+
+For more details, the commands that are run can be found below:
+
+* `gcp install`: <https://github.com/flightcrewhq/crewcli/blob/main/internal/controller/gcp/install/run.go/>
+* `gcp upgrade`: <https://github.com/flightcrewhq/crewcli/blob/main/internal/controller/gcp/upgrade/run.go/>
 
 For Kubernetes, please use our Helm chart. Reach out to sam@flightcrew.io for access.
 

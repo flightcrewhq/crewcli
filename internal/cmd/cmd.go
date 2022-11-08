@@ -2,14 +2,12 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 
 	"flightcrew.io/cli/internal/constants"
-	"flightcrew.io/cli/internal/controller/gcp"
 	gcpinstall "flightcrew.io/cli/internal/controller/gcp/install"
 	gcpupgrade "flightcrew.io/cli/internal/controller/gcp/upgrade"
 	"flightcrew.io/cli/internal/debug"
@@ -95,10 +93,6 @@ var gcpUpgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "Upgrade an existing Flightcrew tower in Google Cloud Provider (GCP) to another version.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !gcp.HasGcloudInPath() {
-			return errors.New("gcloud is not in path")
-		}
-
 		env, cleanup, err := gcpupgrade.ParseFlags(cmd)
 		if err != nil {
 			return err
