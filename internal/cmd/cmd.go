@@ -25,15 +25,22 @@ func init() {
 
 // Do runs the command logic.
 func Do(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+	var debugCleanup func()
 	rootCmd := &cobra.Command{
 		Use:          constants.CLIName,
 		SilenceUsage: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if debugFile := cmd.Flag("debug").Value.String(); len(debugFile) > 0 {
-				debug.Enable(debugFile)
+				debugCleanup, _ = debug.Enable(debugFile)
 			}
 		},
 	}
+	defer func() {
+		if debugCleanup != nil {
+			debugCleanup()
+		}
+	}()
+
 	rootCmd.PersistentFlags().String("debug", "", "enable debug output to a temporary file")
 
 	rootCmd.AddCommand(versionCmd)
