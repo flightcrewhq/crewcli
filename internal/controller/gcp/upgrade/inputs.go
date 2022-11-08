@@ -10,17 +10,18 @@ import (
 	"strings"
 
 	"flightcrew.io/cli/internal/controller"
+	"flightcrew.io/cli/internal/controller/gcp"
+	gconst "flightcrew.io/cli/internal/controller/gcp/constants"
 	"flightcrew.io/cli/internal/debug"
-	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/view/wrapinput"
 )
 
 var (
 	initialInputKeys = []string{
-		keyProject,
-		keyVirtualMachine,
-		keyZone,
-		keyTowerVersion,
+		gconst.KeyProject,
+		gconst.KeyVirtualMachine,
+		gconst.KeyZone,
+		gconst.KeyTowerVersion,
 	}
 )
 
@@ -37,17 +38,17 @@ func NewInputsController(params Params) *InputsController {
 		args:      params.args,
 	}
 
-	if !contains(ctl.args, keyVirtualMachine) {
-		ctl.args[keyVirtualMachine] = "flightcrew-control-tower"
+	if !contains(ctl.args, gconst.KeyVirtualMachine) {
+		ctl.args[gconst.KeyVirtualMachine] = "flightcrew-control-tower"
 	}
-	if !contains(ctl.args, keyZone) {
-		ctl.args[keyZone] = "us-central1-c"
+	if !contains(ctl.args, gconst.KeyZone) {
+		ctl.args[gconst.KeyZone] = "us-central1-c"
 	}
-	if !contains(ctl.args, keyTowerVersion) {
-		ctl.args[keyTowerVersion] = "stable"
+	if !contains(ctl.args, gconst.KeyTowerVersion) {
+		ctl.args[gconst.KeyTowerVersion] = "stable"
 	}
 
-	ctl.args[keyImagePath] = gcp.ImagePath
+	ctl.args[gconst.KeyImagePath] = gcp.ImagePath
 
 	for _, key := range allKeys {
 		var input wrapinput.Model
@@ -58,7 +59,7 @@ func NewInputsController(params Params) *InputsController {
 		}
 
 		switch key {
-		case keyProject:
+		case gconst.KeyProject:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.CharLimit = 0
 			input.Freeform.Placeholder = "project-id-1234"
@@ -68,9 +69,9 @@ func NewInputsController(params Params) *InputsController {
 			input.Title = "Project ID"
 			input.HelpText = "Project ID is the unique string identifier for your Google Cloud Platform project."
 			input.Required = true
-			maybeSetValue(keyProject)
+			maybeSetValue(gconst.KeyProject)
 
-		case keyVirtualMachine:
+		case gconst.KeyVirtualMachine:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "flightcrew-control-tower"
 			input.Freeform.CharLimit = 64
@@ -78,24 +79,24 @@ func NewInputsController(params Params) *InputsController {
 			input.Default = "flightcrew-control-tower"
 			input.Required = true
 			input.HelpText = "VM Name is what the (to be installed) Flightcrew virtual machine instance will be named."
-			maybeSetValue(keyVirtualMachine)
+			maybeSetValue(gconst.KeyVirtualMachine)
 
-		case keyZone:
+		case gconst.KeyZone:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "us-central1-c"
 			input.Freeform.CharLimit = 32
 			input.Title = "Zone"
 			input.Default = "us-central1-c"
 			input.HelpText = "Zone is the Google zone where the (to be installed) Flightcrew virtual machine instance will be located."
-			maybeSetValue(keyZone)
+			maybeSetValue(gconst.KeyZone)
 
-		case keyTowerVersion:
+		case gconst.KeyTowerVersion:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "stable"
 			input.Freeform.CharLimit = 32
 			input.Title = "Tower Version"
 			input.HelpText = "Tower Version is the version of the Tower image that will be installed. (recommended: `stable`)"
-			maybeSetValue(keyTowerVersion)
+			maybeSetValue(gconst.KeyTowerVersion)
 
 		}
 
@@ -138,7 +139,7 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 		}
 
 		switch k {
-		case keyTowerVersion:
+		case gconst.KeyTowerVersion:
 			version, err := gcp.GetTowerImageVersion(input.Value())
 			if setError(err) {
 				debug.Output("convert tower version got error: %v", err)
@@ -148,15 +149,19 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 			input.SetConverted(version)
 			debug.Output("convert tower version is %s", version)
 
-		case keyVirtualMachine:
-			projectInput := ctl.inputs[keyProject]
+		case gconst.KeyVirtualMachine:
+			projectInput := ctl.inputs[gconst.KeyProject]
 			var err error
-			ctl.args[keyVirtualMachineIP], err = ctl.getVirtualMachineIP(projectInput.Value(), ctl.inputs[keyZone].Value(), input.Value())
+			ctl.args[gconst.KeyVirtualMachineIP], err = ctl.getVirtualMachineIP(projectInput.Value(), ctl.inputs[gconst.KeyZone].Value(), input.Value())
 			if setError(err) {
 				break
 			}
 
-			input.SetInfo(fmt.Sprintf("found VM with IP %s", ctl.args[keyVirtualMachineIP]))
+			if ipAddr := ctl.args[gconst.KeyVirtualMachineIP]; len(ipAddr) > 0 {
+				input.SetInfo(fmt.Sprintf("found VM with IP %s", ipAddr))
+			} else {
+				input.SetInfo("found stopped VM")
+			}
 
 		}
 	}
@@ -199,6 +204,8 @@ func contains(m map[string]string, key string) bool {
 }
 
 func (ctl *InputsController) getVirtualMachineIP(projectID string, zone string, vmName string) (string, error) {
+	var notFoundErr = errors.New("no VM with this name and location")
+
 	cmdStr := `gcloud compute instances list --format="csv(NAME,EXTERNAL_IP,STATUS)" --project=${GOOGLE_PROJECT_ID} --zones=${ZONE} --filter="name=${VIRTUAL_MACHINE}"`
 	cmdStr = strings.Replace(cmdStr, "${GOOGLE_PROJECT_ID}", projectID, 1)
 	cmdStr = strings.Replace(cmdStr, "${VIRTUAL_MACHINE}", vmName, 1)
@@ -212,14 +219,14 @@ func (ctl *InputsController) getVirtualMachineIP(projectID string, zone string, 
 
 	err := cmd.Run()
 	if err != nil {
-		return "", err
+		return "", notFoundErr
 	}
 	debug.Output(stdout.String())
 
 	r := csv.NewReader(&stdout)
 	headers, err := r.Read()
 	if err != nil {
-		return "", errors.New("no VM in this location")
+		return "", notFoundErr
 	}
 
 	nameIdx := -1
@@ -237,7 +244,7 @@ func (ctl *InputsController) getVirtualMachineIP(projectID string, zone string, 
 		}
 	}
 	if nameIdx < 0 || ipIdx < 0 {
-		return "", errors.New("no VM in this location")
+		return "", notFoundErr
 	}
 
 	for {
@@ -245,7 +252,7 @@ func (ctl *InputsController) getVirtualMachineIP(projectID string, zone string, 
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return "", fmt.Errorf("read csv from gcloud: %w", err)
+			return "", notFoundErr
 		}
 
 		if entry[nameIdx] == vmName {
@@ -253,5 +260,5 @@ func (ctl *InputsController) getVirtualMachineIP(projectID string, zone string, 
 		}
 	}
 
-	return "", errors.New("no VM in this location")
+	return "", notFoundErr
 }

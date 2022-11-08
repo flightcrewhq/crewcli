@@ -9,10 +9,10 @@ import (
 	"os/exec"
 
 	"flightcrew.io/cli/internal/constants"
-	"flightcrew.io/cli/internal/controller/gcpinstall"
-	"flightcrew.io/cli/internal/controller/gcpupgrade"
+	"flightcrew.io/cli/internal/controller/gcp"
+	gcpinstall "flightcrew.io/cli/internal/controller/gcp/install"
+	gcpupgrade "flightcrew.io/cli/internal/controller/gcp/upgrade"
 	"flightcrew.io/cli/internal/debug"
-	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/view"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -45,7 +45,6 @@ func Do(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int 
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(gcpCmd)
-	//	rootCmd.AddCommand(gcpUninstallCmd)
 
 	gcpCmd.AddCommand(gcpInstallCmd)
 	gcpCmd.AddCommand(gcpUpgradeCmd)
@@ -77,10 +76,6 @@ var gcpInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install a Flightcrew tower into Google Cloud Platform (GCP).",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !gcp.HasGcloudInPath() {
-			return errors.New("gcloud is not in path")
-		}
-
 		env, cleanup, err := gcpinstall.ParseFlags(cmd)
 		if err != nil {
 			return err
@@ -118,13 +113,3 @@ var gcpUpgradeCmd = &cobra.Command{
 		return err
 	},
 }
-
-/* TODO: Uncomment these when we need to implement them.
-var gcpUninstallCmd = &cobra.Command{
-	Use:   "uninstall",
-	Short: "Uninstalls an existing Flightcrew tower and associated resources from Google Cloud Provider (GCP).",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return fmt.Errorf("uninstall is not yet implemented")
-	},
-}
-*/

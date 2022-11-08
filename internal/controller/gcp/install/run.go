@@ -5,6 +5,7 @@ import (
 
 	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/controller"
+	gconst "flightcrew.io/cli/internal/controller/gcp/constants"
 	"flightcrew.io/cli/internal/view/command"
 )
 
@@ -78,18 +79,18 @@ func getIAMRoleCommands(args map[string]string) []*command.Model {
 	commands := make([]*command.Model, 0)
 
 	readReplacer := strings.NewReplacer(
-		"${ROLE}", args[keyIAMRoleRead],
-		"${FILE}", args[keyIAMFileRead],
+		"${ROLE}", args[gconst.KeyIAMRoleRead],
+		"${FILE}", args[gconst.KeyIAMFileRead],
 		"${PERMISSIONS}", constants.Read)
 	checkReadIAMRole := newCheckIAMRole(readReplacer)
 	commands = append(commands,
 		checkReadIAMRole,
 		newCreateIAMRole(readReplacer, checkReadIAMRole))
 
-	if args[keyPermissions] == constants.Write {
+	if args[gconst.KeyPermissions] == constants.Write {
 		writeReplacer := strings.NewReplacer(
-			"${ROLE}", args[keyIAMRoleWrite],
-			"${FILE}", args[keyIAMFileWrite],
+			"${ROLE}", args[gconst.KeyIAMRoleWrite],
+			"${FILE}", args[gconst.KeyIAMFileWrite],
 			"${PERMISSIONS}", constants.Write)
 		checkWriteIAMRole := newCheckIAMRole(writeReplacer)
 		commands = append(commands,
@@ -156,15 +157,15 @@ https://cloud.google.com/iam/docs/granting-changing-revoking-access`,
 	commands := make([]*command.Model, 0)
 
 	readReplacer := strings.NewReplacer(
-		"${ROLE}", keyIAMRoleRead,
+		"${ROLE}", gconst.KeyIAMRoleRead,
 		"${PERMISSIONS}", constants.Read,
 	)
 	readCheck := newCheckPolicy(readReplacer)
 	commands = append(commands, readCheck, newAttachPolicy(readReplacer, readCheck))
 
-	if args[keyPermissions] == constants.Write {
+	if args[gconst.KeyPermissions] == constants.Write {
 		writeReplacer := strings.NewReplacer(
-			"${ROLE}", keyIAMRoleWrite,
+			"${ROLE}", gconst.KeyIAMRoleWrite,
 			"${PERMISSIONS}", constants.Write,
 		)
 		writeCheck := newCheckPolicy(writeReplacer)

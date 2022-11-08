@@ -1,0 +1,26 @@
+package constants
+
+const (
+	KeyProject            = "${GOOGLE_PROJECT_ID}"
+	KeyTowerVersion       = "${TOWER_VERSION}"
+	KeyZone               = "${ZONE}"
+	KeyVirtualMachine     = "${VIRTUAL_MACHINE}"
+	KeyAPIToken           = "${API_TOKEN}"
+	KeyIAMServiceAccount  = "${SERVICE_ACCOUNT}"
+	KeyIAMRoleRead        = "${READ_IAM_ROLE}"
+	KeyIAMFileRead        = "${READ_IAM_FILE}"
+	KeyIAMRoleWrite       = "${WRITE_IAM_ROLE}"
+	KeyIAMFileWrite       = "${WRITE_IAM_FILE}"
+	KeyPermissions        = "${PERMISSIONS}"
+	KeyRPCHost            = "${RPC_HOST}"
+	KeyAppURL             = "${APP_URL}"
+	KeyPlatform           = "${PLATFORM}"
+	KeyTrafficRouter      = "${TRAFFIC_ROUTER}"
+	KeyImagePath          = "${IMAGE_PATH}"
+	KeyTempDir            = "${TEMP_DIR}"
+	KeyGAEMaxVersionCount = "${GAE_MAX_VERSION_COUNT}"
+	KeyGAEMaxVersionAge   = "${GAE_MAX_VERSION_AGE}"
+	KeyProjectOrOrgFlag   = "${PROJECT_OR_ORG_FLAG}"
+	KeyProjectOrOrgSlash  = "${PROJECT_OR_ORG_SLASH}"
+	KeyVirtualMachineIP   = "${VIRTUAL_MACHINE_IP}"
+)

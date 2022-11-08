@@ -10,8 +10,9 @@ import (
 
 	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/controller"
+	"flightcrew.io/cli/internal/controller/gcp"
+	gconst "flightcrew.io/cli/internal/controller/gcp/constants"
 	"flightcrew.io/cli/internal/debug"
-	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/timeconv"
 	"flightcrew.io/cli/internal/view/wrapinput"
 )
@@ -25,27 +26,27 @@ var (
 	)
 
 	initialInputKeys = []string{
-		keyProject,
-		keyVirtualMachine,
-		keyAPIToken,
-		keyPlatform,
-		keyPermissions,
-		keyZone,
-		keyTowerVersion,
-		keyIAMServiceAccount,
+		gconst.KeyProject,
+		gconst.KeyVirtualMachine,
+		gconst.KeyAPIToken,
+		gconst.KeyPlatform,
+		gconst.KeyPermissions,
+		gconst.KeyZone,
+		gconst.KeyTowerVersion,
+		gconst.KeyIAMServiceAccount,
 	}
 
 	writeAppEngineInputKeys = []string{
-		keyProject,
-		keyVirtualMachine,
-		keyAPIToken,
-		keyPlatform,
-		keyPermissions,
-		keyGAEMaxVersionAge,
-		keyGAEMaxVersionCount,
-		keyZone,
-		keyTowerVersion,
-		keyIAMServiceAccount,
+		gconst.KeyProject,
+		gconst.KeyVirtualMachine,
+		gconst.KeyAPIToken,
+		gconst.KeyPlatform,
+		gconst.KeyPermissions,
+		gconst.KeyGAEMaxVersionAge,
+		gconst.KeyGAEMaxVersionCount,
+		gconst.KeyZone,
+		gconst.KeyTowerVersion,
+		gconst.KeyIAMServiceAccount,
 	}
 )
 
@@ -64,25 +65,25 @@ func NewInputsController(params Params) *InputsController {
 		tempDir:   params.tempDir,
 	}
 
-	if !contains(ctl.args, keyVirtualMachine) {
-		ctl.args[keyVirtualMachine] = "flightcrew-control-tower"
+	if !contains(ctl.args, gconst.KeyVirtualMachine) {
+		ctl.args[gconst.KeyVirtualMachine] = "flightcrew-control-tower"
 	}
-	if !contains(ctl.args, keyZone) {
-		ctl.args[keyZone] = "us-central1-c"
+	if !contains(ctl.args, gconst.KeyZone) {
+		ctl.args[gconst.KeyZone] = "us-central1-c"
 	}
-	if !contains(ctl.args, keyTowerVersion) {
-		ctl.args[keyTowerVersion] = "stable"
+	if !contains(ctl.args, gconst.KeyTowerVersion) {
+		ctl.args[gconst.KeyTowerVersion] = "stable"
 	}
 
 	baseURL := gcp.GetHostBaseURL("", "")
-	ctl.args[keyAppURL] = constants.GetAppHostName(baseURL)
-	ctl.args[keyRPCHost] = constants.GetAPIHostName(baseURL)
-	ctl.args[keyTrafficRouter] = ""
-	ctl.args[keyGAEMaxVersionAge] = ""
-	ctl.args[keyGAEMaxVersionCount] = ""
-	ctl.args[keyImagePath] = gcp.ImagePath
-	ctl.args[keyProjectOrOrgFlag] = ""
-	ctl.args[keyProjectOrOrgSlash] = ""
+	ctl.args[gconst.KeyAppURL] = constants.GetAppHostName(baseURL)
+	ctl.args[gconst.KeyRPCHost] = constants.GetAPIHostName(baseURL)
+	ctl.args[gconst.KeyTrafficRouter] = ""
+	ctl.args[gconst.KeyGAEMaxVersionAge] = ""
+	ctl.args[gconst.KeyGAEMaxVersionCount] = ""
+	ctl.args[gconst.KeyImagePath] = gcp.ImagePath
+	ctl.args[gconst.KeyProjectOrOrgFlag] = ""
+	ctl.args[gconst.KeyProjectOrOrgSlash] = ""
 
 	for _, key := range allKeys {
 		var input wrapinput.Model
@@ -93,7 +94,7 @@ func NewInputsController(params Params) *InputsController {
 		}
 
 		switch key {
-		case keyProject:
+		case gconst.KeyProject:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.CharLimit = 0
 			input.Freeform.Placeholder = "project-id-1234"
@@ -103,9 +104,9 @@ func NewInputsController(params Params) *InputsController {
 			input.Title = "Project ID"
 			input.HelpText = "Project ID is the unique string identifier for your Google Cloud Platform project."
 			input.Required = true
-			maybeSetValue(keyProject)
+			maybeSetValue(gconst.KeyProject)
 
-		case keyVirtualMachine:
+		case gconst.KeyVirtualMachine:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "flightcrew-control-tower"
 			input.Freeform.CharLimit = 64
@@ -113,35 +114,35 @@ func NewInputsController(params Params) *InputsController {
 			input.Default = "flightcrew-control-tower"
 			input.Required = true
 			input.HelpText = "VM Name is what the (to be installed) Flightcrew virtual machine instance will be named."
-			maybeSetValue(keyVirtualMachine)
+			maybeSetValue(gconst.KeyVirtualMachine)
 
-		case keyZone:
+		case gconst.KeyZone:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "us-central1-c"
 			input.Freeform.CharLimit = 32
 			input.Title = "Zone"
 			input.Default = "us-central1-c"
 			input.HelpText = "Zone is the Google zone where the (to be installed) Flightcrew virtual machine instance will be located."
-			maybeSetValue(keyZone)
+			maybeSetValue(gconst.KeyZone)
 
-		case keyTowerVersion:
+		case gconst.KeyTowerVersion:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "stable"
 			input.Freeform.CharLimit = 32
 			input.Title = "Tower Version"
 			input.HelpText = "Tower Version is the version of the Tower image that will be installed. (recommended: `stable`)"
-			maybeSetValue(keyTowerVersion)
+			maybeSetValue(gconst.KeyTowerVersion)
 
-		case keyAPIToken:
+		case gconst.KeyAPIToken:
 			input = wrapinput.NewFreeForm()
 			input.Freeform.Placeholder = "api-token"
 			input.Freeform.CharLimit = 0
 			input.Title = "API Token"
 			input.Required = true
 			input.HelpText = "API token is the value provided by Flightcrew to identify your organization."
-			maybeSetValue(keyAPIToken)
+			maybeSetValue(gconst.KeyAPIToken)
 
-		case keyIAMServiceAccount:
+		case gconst.KeyIAMServiceAccount:
 			input = wrapinput.NewFreeForm()
 			input.Title = "Service Account"
 			input.Freeform.CharLimit = 64
@@ -149,29 +150,29 @@ func NewInputsController(params Params) *InputsController {
 			input.SetValue("flightcrew-runner")
 			input.HelpText = "Service Account is the name of the (to be created) IAM service account to run the Flightcrew Tower."
 
-		case keyPlatform:
+		case gconst.KeyPlatform:
 			input = wrapinput.NewRadio([]string{
 				constants.GoogleAppEngineStdDisplay,
 				constants.GoogleComputeEngineDisplay})
 			input.Title = "Platform"
 			input.HelpText = "Platform is which Google Cloud Provider resources Flightcrew will read in."
-			maybeSetValue(keyPlatform)
+			maybeSetValue(gconst.KeyPlatform)
 
-		case keyPermissions:
+		case gconst.KeyPermissions:
 			input = wrapinput.NewRadio([]string{
 				constants.Read,
 				constants.Write})
 			input.Title = "Permissions"
 			input.HelpText = "Permissions is whether Flightcrew will only read in your resources, or if Flightcrew can modify (if you ask us to) your resources."
-			maybeSetValue(keyPermissions)
+			maybeSetValue(gconst.KeyPermissions)
 
-		case keyGAEMaxVersionAge:
+		case gconst.KeyGAEMaxVersionAge:
 			input = wrapinput.NewFreeForm()
 			input.Title = "Max Version Age"
 			input.Freeform.Placeholder = "168h"
 			input.HelpText = "The Tower (App Engine + Write) will prune old versions that are receiving no traffic when they become older than this age (in h,m,s).\nLeave blank to disable."
 
-		case keyGAEMaxVersionCount:
+		case gconst.KeyGAEMaxVersionCount:
 			input = wrapinput.NewFreeForm()
 			input.Title = "Max Version Count"
 			input.Freeform.Placeholder = "30"
@@ -218,20 +219,20 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 		}
 
 		switch k {
-		case keyProject:
+		case gconst.KeyProject:
 			projectID := input.Value()
 			orgID, err := gcp.GetOrganizationID(projectID)
 			if err != nil {
 				input.SetInfo("no organization found")
-				ctl.args[keyProjectOrOrgFlag] = fmtFlagForReplace("project", projectID)
-				ctl.args[keyProjectOrOrgSlash] = fmt.Sprintf(`projects/%s`, projectID)
+				ctl.args[gconst.KeyProjectOrOrgFlag] = fmtFlagForReplace("project", projectID)
+				ctl.args[gconst.KeyProjectOrOrgSlash] = fmt.Sprintf(`projects/%s`, projectID)
 			} else {
 				input.SetInfo("found organization ID '" + orgID + "'")
-				ctl.args[keyProjectOrOrgFlag] = fmtFlagForReplace("organization", orgID)
-				ctl.args[keyProjectOrOrgSlash] = fmt.Sprintf(`organizations/%s`, orgID)
+				ctl.args[gconst.KeyProjectOrOrgFlag] = fmtFlagForReplace("organization", orgID)
+				ctl.args[gconst.KeyProjectOrOrgSlash] = fmt.Sprintf(`organizations/%s`, orgID)
 			}
 
-		case keyTowerVersion:
+		case gconst.KeyTowerVersion:
 			version, err := gcp.GetTowerImageVersion(input.Value())
 			if setError(err) {
 				debug.Output("convert tower version got error: %v", err)
@@ -241,13 +242,13 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 			input.SetConverted(version)
 			debug.Output("convert tower version is %s", version)
 
-		case keyVirtualMachine:
-			projectInput := ctl.inputs[keyProject]
+		case gconst.KeyVirtualMachine:
+			projectInput := ctl.inputs[gconst.KeyProject]
 			baseURL := gcp.GetHostBaseURL(projectInput.Value(), input.Value())
-			ctl.args[keyRPCHost] = constants.GetAPIHostName(baseURL)
-			ctl.args[keyAppURL] = constants.GetAppHostName(baseURL)
+			ctl.args[gconst.KeyRPCHost] = constants.GetAPIHostName(baseURL)
+			ctl.args[gconst.KeyAppURL] = constants.GetAppHostName(baseURL)
 
-		case keyPlatform:
+		case gconst.KeyPlatform:
 			displayName := input.Value()
 			platform, ok := constants.DisplayToPlatform[displayName]
 			if !ok {
@@ -257,8 +258,8 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 
 			input.SetConverted(platform)
 
-		case keyPermissions:
-			platformInput := ctl.inputs[keyPlatform]
+		case gconst.KeyPermissions:
+			platformInput := ctl.inputs[gconst.KeyPlatform]
 			platform, ok := constants.DisplayToPlatform[platformInput.Value()]
 			if !ok {
 				if _, ok := constants.PlatformPermissions[platformInput.Value()]; !ok {
@@ -283,27 +284,27 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 
 			var err error
 			readSettings := perms[constants.Read]
-			ctl.args[keyIAMRoleRead] = readSettings.Role
-			ctl.args[keyIAMFileRead], err = ctl.createFileWithContents(platform, constants.Read, readSettings.Content, "yaml")
+			ctl.args[gconst.KeyIAMRoleRead] = readSettings.Role
+			ctl.args[gconst.KeyIAMFileRead], err = ctl.createFileWithContents(platform, constants.Read, readSettings.Content, "yaml")
 			if setError(err) {
 				break
 			}
 
 			if permission == constants.Write {
 				writeSettings := perms[constants.Write]
-				ctl.args[keyTrafficRouter] = fmtContainerEnvForReplace("TRAFFIC_ROUTER", platform)
-				ctl.args[keyIAMRoleWrite] = writeSettings.Role
-				ctl.args[keyIAMFileWrite], err = ctl.createFileWithContents(platform, constants.Write, writeSettings.Content, "yaml")
+				ctl.args[gconst.KeyTrafficRouter] = fmtContainerEnvForReplace("TRAFFIC_ROUTER", platform)
+				ctl.args[gconst.KeyIAMRoleWrite] = writeSettings.Role
+				ctl.args[gconst.KeyIAMFileWrite], err = ctl.createFileWithContents(platform, constants.Write, writeSettings.Content, "yaml")
 				if setError(err) {
 					break
 				}
 			} else {
-				ctl.args[keyTrafficRouter] = ""
-				ctl.args[keyIAMRoleWrite] = ""
-				ctl.args[keyIAMFileWrite] = ""
+				ctl.args[gconst.KeyTrafficRouter] = ""
+				ctl.args[gconst.KeyIAMRoleWrite] = ""
+				ctl.args[gconst.KeyIAMFileWrite] = ""
 			}
 
-		case keyGAEMaxVersionCount:
+		case gconst.KeyGAEMaxVersionCount:
 			value := input.Value()
 			if len(value) == 0 {
 				break
@@ -322,7 +323,7 @@ func (ctl *InputsController) Validate(inputs []*wrapinput.Model) bool {
 			input.SetInfo("")
 			input.SetConverted(fmtContainerEnvForReplace("APPENGINE_MAX_VERSION_COUNT", fmt.Sprintf("%d", numMaxVersions)))
 
-		case keyGAEMaxVersionAge:
+		case gconst.KeyGAEMaxVersionAge:
 			value := input.Value()
 			if len(value) == 0 {
 				break
@@ -363,8 +364,8 @@ func (ctl InputsController) GetName() string {
 }
 
 func (ctl *InputsController) GetInputs() []*wrapinput.Model {
-	platformInput := ctl.inputs[keyPlatform]
-	permissionsInput := ctl.inputs[keyPermissions]
+	platformInput := ctl.inputs[gconst.KeyPlatform]
+	permissionsInput := ctl.inputs[gconst.KeyPermissions]
 	if platformInput.Radio.Value() == constants.GoogleAppEngineStdDisplay &&
 		permissionsInput.Radio.Value() == constants.Write {
 		ctl.inputKeys = writeAppEngineInputKeys

@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"flightcrew.io/cli/internal/controller"
+	gconst "flightcrew.io/cli/internal/controller/gcp/constants"
 	"flightcrew.io/cli/internal/view/command"
 )
 
@@ -49,27 +50,33 @@ func (ctl RunController) RecreateCommand() string {
 func getVMCommands(args map[string]string) []*command.Model {
 	commands := make([]*command.Model, 0)
 
-	checkSSH := command.NewReadModel(command.Opts{
-		Command:     `RETURN=$(nc -w 1 -z "${VIRTUAL_MACHINE_IP}" 22) if [[ $RETURN -eq 0 ]]; then exit 1; else exit $RETURN; fi`,
-		Description: "This command checks whether the virtual machine is reachable through SSH.",
-		Message: map[command.State]string{
-			command.PassState: "VM is unavailable for SSH access, skipping image pruning.",
-			command.FailState: "SSH access is available. Next step is to prune images from the machine.",
-		},
-	})
+	if len(args[gconst.KeyVirtualMachineIP]) > 0 {
+		checkSSH := command.NewReadModel(command.Opts{
+			Command:     `RETURN=$(nc -w 1 -z "${VIRTUAL_MACHINE_IP}" 22) if [[ $RETURN -eq 0 ]]; then exit 1; else exit $RETURN; fi`,
+			Description: "This command checks whether the virtual machine is reachable through SSH.",
+			Message: map[command.State]string{
+				command.PassState: "VM is unavailable for SSH access, skipping image pruning.",
+				command.FailState: "SSH access is available. Next step is to prune images from the machine.",
+			},
+		})
 
-	commands = append(commands,
-		checkSSH,
-		command.NewWriteModel(command.Opts{
-			SkipIfSucceed: checkSSH,
-			Command: `gcloud compute ssh ${VIRTUAL_MACHINE} \
+		commands = append(commands,
+			checkSSH,
+			command.NewWriteModel(command.Opts{
+				SkipIfSucceed: checkSSH,
+				Command: `gcloud compute ssh ${VIRTUAL_MACHINE} \
 	--project ${GOOGLE_PROJECT_ID} \
 	--zone ${ZONE} \
 	--command 'docker system prune -f -a'`,
-			Description: "This command prunes old images on the virtual machine (through SSH) to save space before downloading a new one.",
-		}),
+				Description: "This command prunes old images on the virtual machine (through SSH) to save space before downloading a new one.",
+			}),
+		)
+	}
+
+	commands = append(commands,
 		// update-container keeps the existing args / envs from when the VM was created,
 		// but they can be overwritten here.
+		// TODO(#12): Allow user to change environment variables as well.
 		command.NewWriteModel(command.Opts{
 			Command: `gcloud compute instances update-container ${VIRTUAL_MACHINE} \
 	--project=${GOOGLE_PROJECT_ID} \
