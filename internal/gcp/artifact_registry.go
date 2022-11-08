@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 
 	registry "google.golang.org/api/artifactregistry/v1"
@@ -20,15 +21,15 @@ const (
 	pageSize = 50
 )
 
-func InitArtifactRegistry() error {
+func init() {
 	ctx := context.Background()
 	service, err := registry.NewService(ctx)
 	if err != nil {
-		return fmt.Errorf("init google artifact registry: %w", err)
+		fmt.Printf("failed to initialize google artifact registry: %s\n", err)
+		os.Exit(1)
 	}
 
 	ArtifactRegistryService = service
-	return nil
 }
 
 // GetTowerImageVersion returns the associated image tag in the form of x.x.x

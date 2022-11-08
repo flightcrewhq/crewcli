@@ -117,10 +117,10 @@ func NewInputsController(params Params) *InputsController {
 
 		case keyZone:
 			input = wrapinput.NewFreeForm()
-			input.Freeform.Placeholder = "us-central"
+			input.Freeform.Placeholder = "us-central1-c"
 			input.Freeform.CharLimit = 32
 			input.Title = "Zone"
-			input.Default = "us-central"
+			input.Default = "us-central1-c"
 			input.HelpText = "Zone is the Google zone where the (to be installed) Flightcrew virtual machine instance will be located."
 			maybeSetValue(keyZone)
 

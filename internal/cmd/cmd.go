@@ -10,6 +10,8 @@ import (
 
 	"flightcrew.io/cli/internal/constants"
 	"flightcrew.io/cli/internal/controller/gcpinstall"
+	"flightcrew.io/cli/internal/controller/gcpupgrade"
+	"flightcrew.io/cli/internal/debug"
 	"flightcrew.io/cli/internal/gcp"
 	"flightcrew.io/cli/internal/view"
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,18 +20,28 @@ import (
 
 func init() {
 	gcpinstall.RegisterFlags(gcpInstallCmd)
+	gcpupgrade.RegisterFlags(gcpUpgradeCmd)
 }
 
 // Do runs the command logic.
 func Do(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
-	rootCmd := &cobra.Command{Use: constants.CLIName, SilenceUsage: true}
+	rootCmd := &cobra.Command{
+		Use:          constants.CLIName,
+		SilenceUsage: true,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if debugFile := cmd.Flag("debug").Value.String(); len(debugFile) > 0 {
+				debug.Enable(debugFile)
+			}
+		},
+	}
+	rootCmd.PersistentFlags().String("debug", "", "enable debug output to a temporary file")
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(gcpCmd)
-	//	rootCmd.AddCommand(gcpUpgradeCmd)
 	//	rootCmd.AddCommand(gcpUninstallCmd)
 
 	gcpCmd.AddCommand(gcpInstallCmd)
+	gcpCmd.AddCommand(gcpUpgradeCmd)
 
 	rootCmd.SetArgs(args)
 	rootCmd.SetIn(stdin)
@@ -59,19 +71,7 @@ var gcpInstallCmd = &cobra.Command{
 	Short: "Install a Flightcrew tower into Google Cloud Platform (GCP).",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !gcp.HasGcloudInPath() {
-			fmt.Printf(`The "gcloud" CLI tool is a pre-requisite to run this script.
-
-If you haven't yet, please install the tool: https://cloud.google.com/sdk/docs/install
-
-If you already have, please add it to your path:
-  export PATH=<where it is>:$PATH
-
-`)
 			return errors.New("gcloud is not in path")
-		}
-
-		if err := gcp.InitArtifactRegistry(); err != nil {
-			return fmt.Errorf("init artifact registry: %w", err)
 		}
 
 		env, cleanup, err := gcpinstall.ParseFlags(cmd)
@@ -89,15 +89,30 @@ If you already have, please add it to your path:
 	},
 }
 
-/* TODO: Uncomment these when we need to implement them.
 var gcpUpgradeCmd = &cobra.Command{
 	Use:   "upgrade",
-	Short: "upgrade an existing Flightcrew tower in Google Cloud Provider (GCP) to another version.",
+	Short: "Upgrade an existing Flightcrew tower in Google Cloud Provider (GCP) to another version.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return fmt.Errorf("upgrade is not yet implemented")
+		if !gcp.HasGcloudInPath() {
+			return errors.New("gcloud is not in path")
+		}
+
+		env, cleanup, err := gcpupgrade.ParseFlags(cmd)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+
+		p := tea.NewProgram(view.NewInputsModel(gcpupgrade.NewInputsController(env)))
+		if err := p.Start(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		return err
 	},
 }
 
+/* TODO: Uncomment these when we need to implement them.
 var gcpUninstallCmd = &cobra.Command{
 	Use:   "uninstall",
 	Short: "Uninstalls an existing Flightcrew tower and associated resources from Google Cloud Provider (GCP).",

@@ -75,6 +75,7 @@ func (m *RunModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		// Allow user to quit at any time.
 		case "ctrl+c", "esc":
+			printRecreatedCommand(m.controller.RecreateCommand())
 			return m, tea.Quit
 
 		case "h":
