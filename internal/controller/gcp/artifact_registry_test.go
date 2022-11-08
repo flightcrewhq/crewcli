@@ -7,6 +7,24 @@ import (
 	registry "google.golang.org/api/artifactregistry/v1"
 )
 
+func TestGetImageVersionWithoutArtifactRegistry(t *testing.T) {
+	keepARS := ArtifactRegistryService
+	ArtifactRegistryService = nil
+	defer func() {
+		ArtifactRegistryService = keepARS
+	}()
+
+	var version string
+	var err error
+
+	version, err = GetTowerImageVersion("2.1.15")
+	assert.NoError(t, err)
+	assert.Equal(t, "2.1.15", version)
+
+	_, err = GetTowerImageVersion("stable")
+	assert.Error(t, err)
+}
+
 func TestGetDesiredImageVersion(mainT *testing.T) {
 	images := []*registry.DockerImage{
 		{

@@ -3,7 +3,7 @@ package gcp_test
 import (
 	"testing"
 
-	"flightcrew.io/cli/internal/gcp"
+	"flightcrew.io/cli/internal/controller/gcp"
 	"github.com/stretchr/testify/assert"
 )
 

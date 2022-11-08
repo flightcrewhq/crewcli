@@ -2,9 +2,9 @@ package gcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"regexp"
 
 	registry "google.golang.org/api/artifactregistry/v1"
@@ -25,8 +25,7 @@ func init() {
 	ctx := context.Background()
 	service, err := registry.NewService(ctx)
 	if err != nil {
-		fmt.Printf("failed to initialize google artifact registry: %s\n", err)
-		os.Exit(1)
+		return
 	}
 
 	ArtifactRegistryService = service
@@ -35,6 +34,14 @@ func init() {
 // GetTowerImageVersion returns the associated image tag in the form of x.x.x
 // so that it can be passed into the Tower.
 func GetTowerImageVersion(version string) (string, error) {
+	if ArtifactRegistryService == nil {
+		if versionRE.MatchString(version) {
+			return version, nil
+		}
+
+		return "", errors.New("want `x.x.x` format: failed to lookup image")
+	}
+
 	images := make([]*registry.DockerImage, 0)
 
 	var resp []*registry.DockerImage
