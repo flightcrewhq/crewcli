@@ -91,7 +91,7 @@ var gcpInstallCmd = &cobra.Command{
 
 var gcpUpgradeCmd = &cobra.Command{
 	Use:   "upgrade",
-	Short: "Upgrade an existing Flightcrew tower in Google Cloud Provider (GCP) to another version.",
+	Short: "Upgrade an existing Flightcrew tower in Google Cloud Platform (GCP) to another version.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		env, cleanup, err := gcpupgrade.ParseFlags(cmd)
 		if err != nil {
