@@ -2,6 +2,7 @@ package gcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -20,20 +21,27 @@ const (
 	pageSize = 50
 )
 
-func InitArtifactRegistry() error {
+func init() {
 	ctx := context.Background()
 	service, err := registry.NewService(ctx)
 	if err != nil {
-		return fmt.Errorf("init google artifact registry: %w", err)
+		return
 	}
 
 	ArtifactRegistryService = service
-	return nil
 }
 
 // GetTowerImageVersion returns the associated image tag in the form of x.x.x
 // so that it can be passed into the Tower.
 func GetTowerImageVersion(version string) (string, error) {
+	if ArtifactRegistryService == nil {
+		if versionRE.MatchString(version) {
+			return version, nil
+		}
+
+		return "", errors.New("want `x.x.x` format: failed to lookup image")
+	}
+
 	images := make([]*registry.DockerImage, 0)
 
 	var resp []*registry.DockerImage
