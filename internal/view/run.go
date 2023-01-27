@@ -8,6 +8,7 @@ import (
 	"flightcrew.io/cli/internal/style"
 	"flightcrew.io/cli/internal/view/button"
 	"flightcrew.io/cli/internal/view/command"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -45,11 +46,8 @@ func NewRunModel(controller controller.Run) *RunModel {
 	p := paginator.New()
 	p.Type = paginator.Dots
 	p.PerPage = 1
-	p.UseHLKeys = true
-	p.UseJKKeys = false
-	p.UseLeftRightKeys = false
-	p.UsePgUpPgDownKeys = false
-	p.UseUpDownKeys = false
+	p.KeyMap.PrevPage = key.NewBinding(key.WithKeys("h"))
+	p.KeyMap.NextPage = key.NewBinding(key.WithKeys("l"))
 	p.ActiveDot = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "235", Dark: "252"}).Render("•")
 	p.InactiveDot = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "250", Dark: "238"}).Render("•")
 	p.SetTotalPages(len(m.commands))
