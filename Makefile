@@ -1,6 +1,7 @@
 # Go executable to use, i.e. `make GO=/usr/bin/go1.18`
 # Defaults to first found in PATH
 GO?=go
+GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint
 
 bin/bindl:
 	export OUTDIR=bin/ && curl --location https://bindl.dev/bootstrap.sh | bash
@@ -26,13 +27,13 @@ test:
 	${GO} test -race -v ./...
 
 .PHONY: lint
-lint: bin/golangci-lint
-	bin/golangci-lint run
+lint:
+	$(GOLANGCI_LINT) run
 
 .PHONY: lint/fix
-lint/fix: bin/golangci-lint
-	bin/golangci-lint run --fix
+lint/fix:
+	$(GOLANGCI_LINT) run run --fix
 
 .PHONY: lint/gh-actions
-lint/gh-actions: bin/golangci-lint
-	bin/golangci-lint run --out-format github-actions
+lint/gh-actions:
+	$(GOLANGCI_LINT) run run --out-format github-actions

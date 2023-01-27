@@ -81,7 +81,8 @@ var gcpInstallCmd = &cobra.Command{
 		defer cleanup()
 
 		p := tea.NewProgram(view.NewInputsModel(gcpinstall.NewInputsController(env)))
-		if err := p.Start(); err != nil {
+		_, err = p.Run()
+		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
@@ -100,7 +101,8 @@ var gcpUpgradeCmd = &cobra.Command{
 		defer cleanup()
 
 		p := tea.NewProgram(view.NewInputsModel(gcpupgrade.NewInputsController(env)))
-		if err := p.Start(); err != nil {
+		_, err = p.Run()
+		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
