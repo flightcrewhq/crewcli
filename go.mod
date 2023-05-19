@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.7.1
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.3
-	google.golang.org/api v0.121.0
+	google.golang.org/api v0.123.0
 )
 
 require (
