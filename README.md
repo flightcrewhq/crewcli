@@ -37,10 +37,10 @@ For more details, the commands that are run can be found below:
 * `gcp install`: <https://github.com/flightcrewhq/crewcli/blob/main/internal/controller/gcp/install/run.go/>
 * `gcp upgrade`: <https://github.com/flightcrewhq/crewcli/blob/main/internal/controller/gcp/upgrade/run.go/>
 
-For Kubernetes, please use our Helm chart. Reach out to sam@flightcrew.io for access.
+For Kubernetes, please use our Helm chart. Reach out to [hello@flightcrew.io](mailto:hello@flightcrew.io) for access.
 
 ## Contact
 
-For help, reach out to support@flightcrew.io.
+For help, reach out to [support@flightcrew.io](mailto:support@flightcrew.io).
 
 Sign up for our newsletter at <https://flightcrew.io/>!
