@@ -212,13 +212,21 @@ func getVMCommands(args map[string]string) []*command.Model {
 		}),
 		command.NewWriteModel(command.Opts{
 			SkipIfSucceed: checkVMExists,
-			Command: `gcloud compute instances add-metadata ${VIRTUAL_MACHINE} \
-	--project=${GOOGLE_PROJECT_ID} \
-	--zone=${ZONE}  \
-	--metadata=google-logging-enabled=false`,
-			Description: `Disable the VM's builtin logger because it has a memory leak and will cause the VM to crash after 1-2 weeks.
+			Command: `gcloud compute instances add-metadata ${VIRTUAL_MACHINE} ` +
+				`--project=${GOOGLE_PROJECT_ID} ` +
+				`--zone=${ZONE} ` +
+				`--metadata=google-logging-enabled=false,startup-script=$'#!/bin/bash\n'` +
+				`$'docker system prune -af\n'` +
+				`$'docker run -d -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --interval 300 --cleanup --include-restarting'`,
+			Description: `Disable the VM's builtin logger because it has a memory leak and allow the image to auto-update.
 
 https://serverfault.com/questions/980569/disable-fluentd-on-on-container-optimized-os-gce`,
+		}),
+		command.NewWriteModel(command.Opts{
+			SkipIfSucceed: checkVMExists,
+			Command: `gcloud compute instances stop ${VIRTUAL_MACHINE} --project=${GOOGLE_PROJECT_ID} --zone=${ZONE} && \
+gcloud compute instances start ${VIRTUAL_MACHINE} --project=${GOOGLE_PROJECT_ID} --zone=${ZONE}`,
+			Description: `Restart the VM to receive the metadata updates from the previous command`,
 		}),
 	}
 }
